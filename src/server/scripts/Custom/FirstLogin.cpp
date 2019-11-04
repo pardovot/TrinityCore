@@ -88,13 +88,10 @@ public:
 
             if(playerClass == 2 || playerClass == 11) {
                 SendGossipMenuDHT(player);
-                SetGossipMenuFalse(player);
             } else if(playerClass == 5 || playerClass == 7) {
                 SendGossipMenuHD(player);
-                SetGossipMenuFalse(player);
             } else if(playerClass == 1 || playerClass == 6) {
                 SendGossipMenuTD(player);
-                SetGossipMenuFalse(player);
             }
         }
     }
@@ -156,15 +153,17 @@ public:
         case DPS_ACTION:
             ClearGossipMenuFor(player);
             CloseGossipMenuFor(player);
-
+            SetGossipMenuFalse(player);
             break;
         case HEALING_ACTION:
             ClearGossipMenuFor(player);
             CloseGossipMenuFor(player);
+            SetGossipMenuFalse(player);
             break;
         case TANK_ACTION:
             ClearGossipMenuFor(player);
             CloseGossipMenuFor(player);
+            SetGossipMenuFalse(player);
             break;
         }
     }

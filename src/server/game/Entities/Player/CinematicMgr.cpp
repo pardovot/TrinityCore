@@ -21,6 +21,13 @@
 #include "MotionMaster.h"
 #include "Player.h"
 #include "TemporarySummon.h"
+#include "Chat.h"
+#include "ScriptMgr.h"
+#include "ScriptedGossip.h"
+#include "DatabaseEnv.h"
+#include "ScriptedCreature.h"
+#include "CreatureAI.h"
+#include <iostream>
 
 CinematicMgr::CinematicMgr(Player* playerref)
 {
@@ -36,32 +43,37 @@ CinematicMgr::CinematicMgr(Player* playerref)
 
 CinematicMgr::~CinematicMgr()
 {
-    if (m_cinematicCamera && m_activeCinematicCameraId)
+    if(m_cinematicCamera && m_activeCinematicCameraId)
         EndCinematic();
 }
 
 void CinematicMgr::BeginCinematic()
 {
     // Sanity check for active camera set
-    if (m_activeCinematicCameraId == 0)
+    if(m_activeCinematicCameraId == 0)
         return;
 
-    if (std::vector<FlyByCamera> const* flyByCameras = GetFlyByCameras(m_activeCinematicCameraId))
+    if(std::vector<FlyByCamera> const* flyByCameras = GetFlyByCameras(m_activeCinematicCameraId))
     {
         // Initialize diff, and set camera
         m_cinematicDiff = 0;
         m_cinematicCamera = flyByCameras;
 
         auto camitr = m_cinematicCamera->begin();
-        if (camitr != m_cinematicCamera->end())
+        if(camitr != m_cinematicCamera->end())
         {
             Position const& pos = camitr->locations;
-            if (!pos.IsPositionValid())
+            if(!pos.IsPositionValid())
                 return;
 
             player->GetMap()->LoadGrid(pos.GetPositionX(), pos.GetPositionY());
+<<<<<<< HEAD
             m_CinematicObject = player->SummonCreature(VISUAL_WAYPOINT, pos.m_positionX, pos.m_positionY, pos.m_positionZ, 0.0f, TEMPSUMMON_TIMED_DESPAWN, 5min);
             if (m_CinematicObject)
+=======
+            m_CinematicObject = player->SummonCreature(VISUAL_WAYPOINT, pos.m_positionX, pos.m_positionY, pos.m_positionZ, 0.0f, TEMPSUMMON_TIMED_DESPAWN, 5 * MINUTE * IN_MILLISECONDS);
+            if(m_CinematicObject)
+>>>>>>> 96809dd891 (Skipped cinematic into and display gossip)
             {
                 m_CinematicObject->setActive(true);
                 player->SetViewpoint(m_CinematicObject, true);
@@ -75,16 +87,16 @@ void CinematicMgr::BeginCinematic()
 
 void CinematicMgr::EndCinematic()
 {
-    if (m_activeCinematicCameraId == 0)
+    if(m_activeCinematicCameraId == 0)
         return;
 
     m_cinematicDiff = 0;
     m_cinematicCamera = nullptr;
     m_activeCinematicCameraId = 0;
-    if (m_CinematicObject)
+    if(m_CinematicObject)
     {
-        if (WorldObject* vpObject = player->GetViewpoint())
-            if (vpObject == m_CinematicObject)
+        if(WorldObject* vpObject = player->GetViewpoint())
+            if(vpObject == m_CinematicObject)
                 player->SetViewpoint(m_CinematicObject, false);
 
         m_CinematicObject->AddObjectToRemoveList();
@@ -93,7 +105,7 @@ void CinematicMgr::EndCinematic()
 
 void CinematicMgr::UpdateCinematicLocation(uint32 /*diff*/)
 {
-    if (m_activeCinematicCameraId == 0 || !m_cinematicCamera || m_cinematicCamera->size() == 0)
+    if(m_activeCinematicCameraId == 0 || !m_cinematicCamera || m_cinematicCamera->size() == 0)
         return;
 
     Position lastPosition;
@@ -102,9 +114,9 @@ void CinematicMgr::UpdateCinematicLocation(uint32 /*diff*/)
     uint32 nextTimestamp = 0;
 
     // Obtain direction of travel
-    for (FlyByCamera cam : *m_cinematicCamera)
+    for(FlyByCamera cam : *m_cinematicCamera)
     {
-        if (cam.timeStamp > m_cinematicDiff)
+        if(cam.timeStamp > m_cinematicDiff)
         {
             nextPosition.Relocate(cam.locations);
             nextTimestamp = cam.timeStamp;
@@ -115,7 +127,7 @@ void CinematicMgr::UpdateCinematicLocation(uint32 /*diff*/)
     }
     float angle = lastPosition.GetAbsoluteAngle(&nextPosition);
     angle -= lastPosition.GetOrientation();
-    if (angle < 0)
+    if(angle < 0)
         angle += 2 * float(M_PI);
 
     // Look for position around 2 second ahead of us.
@@ -126,17 +138,17 @@ void CinematicMgr::UpdateCinematicLocation(uint32 /*diff*/)
 
     // Get an iterator to the last entry in the cameras, to make sure we don't go beyond the end
     auto endItr = m_cinematicCamera->rbegin();
-    if (endItr != m_cinematicCamera->rend() && workDiff > static_cast<int32>(endItr->timeStamp))
+    if(endItr != m_cinematicCamera->rend() && workDiff > static_cast<int32>(endItr->timeStamp))
         workDiff = endItr->timeStamp;
 
     // Never try to go back in time before the start of cinematic!
-    if (workDiff < 0)
+    if(workDiff < 0)
         workDiff = m_cinematicDiff;
 
     // Obtain the previous and next waypoint based on timestamp
-    for (FlyByCamera cam : *m_cinematicCamera)
+    for(FlyByCamera cam : *m_cinematicCamera)
     {
-        if (static_cast<int32>(cam.timeStamp) >= workDiff)
+        if(static_cast<int32>(cam.timeStamp) >= workDiff)
         {
             nextPosition.Relocate(cam.locations);
             nextTimestamp = cam.timeStamp;
@@ -147,7 +159,7 @@ void CinematicMgr::UpdateCinematicLocation(uint32 /*diff*/)
     }
 
     // Never try to go beyond the end of the cinematic
-    if (workDiff > static_cast<int32>(nextTimestamp))
+    if(workDiff > static_cast<int32>(nextTimestamp))
         workDiff = static_cast<int32>(nextTimestamp);
 
     // Interpolate the position for this moment in time (or the adjusted moment in time)
@@ -161,10 +173,10 @@ void CinematicMgr::UpdateCinematicLocation(uint32 /*diff*/)
 
     // Advance (at speed) to this position. The remote sight object is used
     // to send update information to player in cinematic
-    if (m_CinematicObject && interPosition.IsPositionValid())
+    if(m_CinematicObject && interPosition.IsPositionValid())
         m_CinematicObject->MonsterMoveWithSpeed(interPosition.m_positionX, interPosition.m_positionY, interPosition.m_positionZ, 500.0f, false, true);
 
     // If we never received an end packet 10 seconds after the final timestamp then force an end
-    if (m_cinematicDiff > m_cinematicLength + 10 * IN_MILLISECONDS)
+    if(m_cinematicDiff > m_cinematicLength + 10 * IN_MILLISECONDS)
         EndCinematic();
 }
