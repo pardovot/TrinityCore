@@ -19,6 +19,9 @@
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
-void AddCustomScripts()
-{
+
+void AddSC_FirstLogin();
+
+void AddCustomScripts() {
+    AddSC_FirstLogin();
 }
