@@ -123,16 +123,25 @@ public:
             if(playerClass == 2 || playerClass == 11) {
                 // Send gossip menu for paladin and druid.
                 SendGossipMenuDHT(player);
+<<<<<<< HEAD
 
+=======
+>>>>>>> 96809dd891 (Skipped cinematic into and display gossip)
             } else if(playerClass == 5 || playerClass == 7) {
                 // Send gossip menu for priest and shaman.
                 SendGossipMenuHD(player);
+<<<<<<< HEAD
 
+=======
+>>>>>>> 96809dd891 (Skipped cinematic into and display gossip)
             } else if(playerClass == 1 || playerClass == 6) {
                 // Send gossip menu for warrior and DK.
                 SendGossipMenuTD(player);
+<<<<<<< HEAD
             } else {
 
+=======
+>>>>>>> 96809dd891 (Skipped cinematic into and display gossip)
             }
         }
     }
@@ -355,6 +364,7 @@ public:
         return true;
     }
 
+<<<<<<< HEAD
     bool SendPaladinHealingGear(Player* player) {
         player->Say("Sending paladin heal gear", LANG_UNIVERSAL);
         for(int itemId : PALADIN_HEAL_GEAR) {
@@ -476,6 +486,25 @@ public:
         player->Say("Sending DK DPS gear", LANG_UNIVERSAL);
         for(int itemId : DK_DPS_GEAR) {
             SendItem(player, itemId);
+=======
+        ClearGossipMenuFor(player);
+        switch(action) {
+        case DPS_ACTION:
+            ClearGossipMenuFor(player);
+            CloseGossipMenuFor(player);
+            SetGossipMenuFalse(player);
+            break;
+        case HEALING_ACTION:
+            ClearGossipMenuFor(player);
+            CloseGossipMenuFor(player);
+            SetGossipMenuFalse(player);
+            break;
+        case TANK_ACTION:
+            ClearGossipMenuFor(player);
+            CloseGossipMenuFor(player);
+            SetGossipMenuFalse(player);
+            break;
+>>>>>>> 96809dd891 (Skipped cinematic into and display gossip)
         }
         SetGossipMenuFalse(player);
         return true;

@@ -68,8 +68,13 @@ void CinematicMgr::BeginCinematic()
 
             player->GetMap()->LoadGrid(pos.GetPositionX(), pos.GetPositionY());
 <<<<<<< HEAD
+<<<<<<< HEAD
             m_CinematicObject = player->SummonCreature(VISUAL_WAYPOINT, pos.m_positionX, pos.m_positionY, pos.m_positionZ, 0.0f, TEMPSUMMON_TIMED_DESPAWN, 5min);
             if (m_CinematicObject)
+=======
+            m_CinematicObject = player->SummonCreature(VISUAL_WAYPOINT, pos.m_positionX, pos.m_positionY, pos.m_positionZ, 0.0f, TEMPSUMMON_TIMED_DESPAWN, 5 * MINUTE * IN_MILLISECONDS);
+            if(m_CinematicObject)
+>>>>>>> 96809dd891 (Skipped cinematic into and display gossip)
 =======
             m_CinematicObject = player->SummonCreature(VISUAL_WAYPOINT, pos.m_positionX, pos.m_positionY, pos.m_positionZ, 0.0f, TEMPSUMMON_TIMED_DESPAWN, 5 * MINUTE * IN_MILLISECONDS);
             if(m_CinematicObject)
