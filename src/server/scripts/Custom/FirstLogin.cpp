@@ -15,6 +15,8 @@
 #define HEALING_GEAR          "Choose Healing gear"
 #define DPS_GEAR              "Choose DPS gear"
 #define TANK_GEAR             "Choose Tanking gear"
+#define SPEC_DRUID_FERAL      "Choose feral druid gear"
+#define SPEC_DRUID_BALANCE    "Choose balance druid gear"
 
 #define MENU_ID               2522
 
@@ -22,10 +24,14 @@ enum Options {
     HEALING_ACTION = 1,
     DPS_ACTION = 2,
     TANK_ACTION = 3,
+    SPEC_DRUID_BALANCE_ACTION = 4,
+    SPEC_DRUID_FERAL_ACTION = 5,
+    /*
     JOIN_QUE_ACTION = 5,
     LEAVE_QUE_ACTION = 6,
     QUE_STATUS_ACTION = 7,
     GET_CLASS_ACTION = 8
+    */
 };
 
 /*
@@ -76,12 +82,12 @@ public:
         //auto result = CharacterDatabase.PQuery("SELECT %s FROM %t WHERE guid=%p", "gossip_menu", "characters", player->GetGUID().GetCounter());
         //auto result = CharacterDatabase.PQuery("SELECT %s FROM characters WHERE guid=%u", "gossip_menu", player->GetGUID().GetCounter());
         std::cout << "SELECT %s FROM characters WHERE guid=%u", "gossip_menu", std::to_string(player->GetGUID().GetCounter());
-        auto result = CharacterDatabase.PQuery("SELECT " +DB_NAME +" FROM " +DB_TABLE +" WHERE guid=" +std::to_string(player->GetGUID().GetCounter()));
+        auto result = CharacterDatabase.PQuery("SELECT " + DB_NAME + " FROM " + DB_TABLE + " WHERE guid=" + std::to_string(player->GetGUID().GetCounter()));
         bool value;
         if(result) {
             value = result->Fetch()[0].GetUInt8();
         }
-        player->Say(std::to_string(value), LANG_UNIVERSAL);   
+        player->Say(std::to_string(value), LANG_UNIVERSAL);
 
         if(value) {
             uint8 playerClass = player->GetClass();
@@ -95,6 +101,44 @@ public:
             } else {
 
             }
+        }
+    }
+
+    void OnGossipSelect(Player* player, uint32 menu_id, uint32 /*sender*/, uint32 action) override {
+        if(menu_id != MENU_ID) { // Not the menu coded here? stop.
+            return;
+        }
+
+        ClearGossipMenuFor(player);
+        switch(action) {
+        case DPS_ACTION:
+            // If the class is Druid send another gossip to choose the spec(balance/feral).
+            if(player->GetClass() == 11) {
+
+            } else {
+                SetGossipMenuFalse(player);
+            }
+            ClearGossipMenuFor(player);
+            CloseGossipMenuFor(player);
+            break;
+        case HEALING_ACTION:
+            ClearGossipMenuFor(player);
+            CloseGossipMenuFor(player);
+            SetGossipMenuFalse(player);
+            break;
+        case TANK_ACTION:
+            ClearGossipMenuFor(player);
+            CloseGossipMenuFor(player);
+            SetGossipMenuFalse(player);
+            break;
+        case SPEC_DRUID_BALANCE_ACTION:
+            ClearGossipMenuFor(player);
+            CloseGossipMenuFor(player);
+            break;
+        case SPEC_DRUID_FERAL_ACTION:
+            ClearGossipMenuFor(player);
+            CloseGossipMenuFor(player);
+            break;
         }
     }
 
@@ -152,35 +196,42 @@ public:
         SendGossipMenuFor(player, TANK_ACTION, player->GetGUID());
     }
 
-    void SetGossipMenuFalse(Player* player) {
-        CharacterDatabase.PQuery("UPDATE " +DB_TABLE +" SET " +DB_NAME +"=0 WHERE guid = " +std::to_string(player->GetGUID()));
-        
-    }
-
-    void OnGossipSelect(Player* player, uint32 menu_id, uint32 /*sender*/, uint32 action) override {
-        if(menu_id != MENU_ID) { // Not the menu coded here? stop.
-            return;
-        }
-
+    void SelectDruidSpec(Player* player) {
+        player->PlayerTalkClass->GetGossipMenu().SetMenuId(MENU_ID);
         ClearGossipMenuFor(player);
-        switch(action) {
-        case DPS_ACTION:
-            ClearGossipMenuFor(player);
-            CloseGossipMenuFor(player);
-            SetGossipMenuFalse(player);
-            break;
-        case HEALING_ACTION:
-            ClearGossipMenuFor(player);
-            CloseGossipMenuFor(player);
-            SetGossipMenuFalse(player);
-            break;
-        case TANK_ACTION:
-            ClearGossipMenuFor(player);
-            CloseGossipMenuFor(player);
-            SetGossipMenuFalse(player);
-            break;
+
+        // Select druid balance gear.
+        AddGossipItemFor(player, GOSSIP_ICON_CHAT, SPEC_DRUID_BALANCE, GOSSIP_SENDER_MAIN, SPEC_DRUID_BALANCE_ACTION);
+        SendGossipMenuFor(player, SPEC_DRUID_BALANCE_ACTION, player->GetGUID());
+
+        // Select druid feral gear.
+        AddGossipItemFor(player, GOSSIP_ICON_CHAT, SPEC_DRUID_FERAL, GOSSIP_SENDER_MAIN, SPEC_DRUID_FERAL_ACTION);
+        SendGossipMenuFor(player, SPEC_DRUID_FERAL_ACTION, player->GetGUID());
+    }
+
+    void SetGossipMenuFalse(Player* player) {
+        CharacterDatabase.PQuery("UPDATE " + DB_TABLE + " SET " + DB_NAME + "=0 WHERE guid = " + std::to_string(player->GetGUID()));
+
+    }
+
+    bool SendDPSGear(Player* player) {
+        switch(player->GetClass()) {
+
         }
     }
+
+    bool SendTankingGear(Player* player) {
+        switch(player->GetClass()) {
+
+        }
+    }
+
+    bool SendHealingGear(Player* player) {
+        switch(player->GetClass()) {
+
+        }
+    }
+
 
     bool SendPaladinTankingGear(Player* player) {
         return true;
