@@ -92,6 +92,8 @@ public:
                 SendGossipMenuHD(player);
             } else if(playerClass == 1 || playerClass == 6) {
                 SendGossipMenuTD(player);
+            } else {
+
             }
         }
     }
@@ -138,6 +140,18 @@ public:
         SendGossipMenuFor(player, TANK_ACTION, player->GetGUID());
     }
 
+    void SendGossipMenuDPS(Player* player) {
+        player->PlayerTalkClass->GetGossipMenu().SetMenuId(MENU_ID);
+        ClearGossipMenuFor(player);
+        // DPS gear
+        AddGossipItemFor(player, GOSSIP_ICON_CHAT, DPS_GEAR, GOSSIP_SENDER_MAIN, DPS_ACTION);
+        SendGossipMenuFor(player, DPS_ACTION, player->GetGUID());
+
+        // Tank gear
+        AddGossipItemFor(player, GOSSIP_ICON_CHAT, TANK_GEAR, GOSSIP_SENDER_MAIN, TANK_ACTION);
+        SendGossipMenuFor(player, TANK_ACTION, player->GetGUID());
+    }
+
     void SetGossipMenuFalse(Player* player) {
         CharacterDatabase.PQuery("UPDATE " +DB_TABLE +" SET " +DB_NAME +"=0 WHERE guid = " +std::to_string(player->GetGUID()));
         
@@ -166,6 +180,62 @@ public:
             SetGossipMenuFalse(player);
             break;
         }
+    }
+
+    bool SendPaladinTankingGear(Player* player) {
+        return true;
+    }
+
+    bool SendPaladinHealingGear(Player* player) {
+        return true;
+    }
+
+    bool SendPaladinDPSGear(Player* player) {
+        return true;
+    }
+
+    bool SendDruidHealingGear(Player* player) {
+        return true;
+    }
+
+    bool SendDruidTankingGear(Player* player) {
+        return true;
+    }
+
+    bool SendDruidDPSGear(Player* player) {
+        return true;
+    }
+
+    bool SendPriestHealingGear(Player* player) {
+        return true;
+    }
+
+    bool SendPriestDPSGear(Player* player) {
+        return true;
+    }
+
+    bool SendShamanHealingGear(Player* player) {
+        return true;
+    }
+
+    bool SendShamanDPSGear(Player* player) {
+        return true;
+    }
+
+    bool SendWarriorTankingGear(Player* player) {
+        return true;
+    }
+
+    bool SendWarriorDPSgGear(Player* player) {
+        return true;
+    }
+
+    bool SendDKTankingGear(Player* player) {
+        return true;
+    }
+
+    bool SendDKDPSGear(Player* player) {
+        return true;
     }
 };
 
