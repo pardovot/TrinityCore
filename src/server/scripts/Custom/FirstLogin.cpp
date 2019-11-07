@@ -117,7 +117,6 @@ public:
             if(player->GetClass() == 11) {
                 SelectDruidSpec(player);
             } else {
-                SetGossipMenuFalse(player);
                 switch(player->GetClass()) {
                     // Warrior gear
                 case 1:
@@ -173,16 +172,33 @@ public:
                 SendDruidHealingGear(player);
                 break;
             }
-            SetGossipMenuFalse(player);
             break;
         case TANK_ACTION:
             ClearGossipMenuFor(player);
             CloseGossipMenuFor(player);
             switch(player->GetClass()) {
 
+                // Warrior gear.
+            case 1:
+                SendWarriorTankingGear(player);
+                break;
+
+                // Paladin gear.
+            case 2:
+                SendPaladinTankingGear(player);
+                break;
+
+                // DK gear.
+            case 6:
+                SendDKTankingGear(player);
+                break;
+
+                // Druid gear.
+            case 11:
+                SendDruidTankingGear(player);
+                break;
             }
 
-            SetGossipMenuFalse(player);
             break;
         case SPEC_DRUID_BALANCE_ACTION:
             ClearGossipMenuFor(player);
@@ -289,58 +305,72 @@ public:
 
 
     bool SendPaladinTankingGear(Player* player) {
+        SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendPaladinHealingGear(Player* player) {
+        SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendPaladinDPSGear(Player* player) {
+        SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendDruidHealingGear(Player* player) {
+        SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendDruidTankingGear(Player* player) {
+        SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendDruidDPSGear(Player* player) {
+        SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendPriestHealingGear(Player* player) {
+        SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendPriestDPSGear(Player* player) {
+        SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendShamanHealingGear(Player* player) {
+        SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendShamanDPSGear(Player* player) {
+        SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendWarriorTankingGear(Player* player) {
+        SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendWarriorDPSGear(Player* player) {
+        SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendDKTankingGear(Player* player) {
+        SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendDKDPSGear(Player* player) {
+        SetGossipMenuFalse(player);
         return true;
     }
 };
