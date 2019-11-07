@@ -110,34 +110,89 @@ public:
         }
 
         ClearGossipMenuFor(player);
+        CloseGossipMenuFor(player);
         switch(action) {
         case DPS_ACTION:
             // If the class is Druid send another gossip to choose the spec(balance/feral).
             if(player->GetClass() == 11) {
-
+                SelectDruidSpec(player);
             } else {
                 SetGossipMenuFalse(player);
+                switch(player->GetClass()) {
+                    // Warrior gear
+                case 1:
+                    SendWarriorDPSGear(player);
+                    break;
+
+                    // Paladin gear.
+                case 2:
+                    SendPaladinDPSGear(player);
+                    break;
+
+                    // Priest gear.
+                case 5:
+                    SendPriestDPSGear(player);
+                    break;
+
+                    // DK gear.
+                case 6:
+                    SendDKDPSGear(player);
+                    break;
+
+                    // Shaman gear.
+                case 7:
+                    SendShamanDPSGear(player);
+                    break;
+
+                }
             }
-            ClearGossipMenuFor(player);
-            CloseGossipMenuFor(player);
             break;
         case HEALING_ACTION:
             ClearGossipMenuFor(player);
             CloseGossipMenuFor(player);
+
+            switch(player->GetClass()) {
+
+                // Paladin gear.
+            case 2:
+                SendPaladinHealingGear(player);
+                break;
+
+                // Priest gear.
+            case 5:
+                SendPriestHealingGear(player);
+                break;
+
+                // Shaman gear.
+            case 7:
+                SendShamanHealingGear(player);
+                break;
+
+                // Druid gear.
+            case 11:
+                SendDruidHealingGear(player);
+                break;
+            }
             SetGossipMenuFalse(player);
             break;
         case TANK_ACTION:
             ClearGossipMenuFor(player);
             CloseGossipMenuFor(player);
+            switch(player->GetClass()) {
+
+            }
+
             SetGossipMenuFalse(player);
             break;
         case SPEC_DRUID_BALANCE_ACTION:
             ClearGossipMenuFor(player);
             CloseGossipMenuFor(player);
+            SetGossipMenuFalse(player);
             break;
         case SPEC_DRUID_FERAL_ACTION:
             ClearGossipMenuFor(player);
             CloseGossipMenuFor(player);
+            SetGossipMenuFalse(player);
             break;
         }
     }
@@ -277,7 +332,7 @@ public:
         return true;
     }
 
-    bool SendWarriorDPSgGear(Player* player) {
+    bool SendWarriorDPSGear(Player* player) {
         return true;
     }
 
