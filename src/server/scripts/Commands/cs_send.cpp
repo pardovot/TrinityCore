@@ -28,10 +28,13 @@
 #include "WorldSession.h"
 #include <iostream>
 #include "string.h"
+<<<<<<< HEAD
 
 #if TRINITY_COMPILER == TRINITY_COMPILER_GNU
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
+=======
+>>>>>>> a39704308e (Create and send items on login)
 
 class send_commandscript : public CommandScript
 {

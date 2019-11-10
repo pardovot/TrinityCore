@@ -110,6 +110,16 @@ public:
     FirstLogin() : PlayerScript("FirstLogin") {}
 
     void OnLogin(Player* player, bool firstLogin) override {
+<<<<<<< HEAD
+=======
+        asd(player, 127);
+        //ItemPosCountVec dest;
+
+        //Item* item = player->StoreNewItem(dest, 127, true, GenerateItemRandomPropertyId(127));
+        //Item* item = Item::CreateItem(127, 1, player);
+        //player->SendNewItem(item, 1, false, true);
+        //player->SendNewItem(item, 1, true, false);
+>>>>>>> a39704308e (Create and send items on login)
         auto result = CharacterDatabase.PQuery("SELECT " + DB_NAME + " FROM " + DB_TABLE + " WHERE guid=" + std::to_string(player->GetGUID().GetCounter()));
         bool value;
         if(result) {
@@ -146,7 +156,11 @@ public:
         }
     }
 
+<<<<<<< HEAD
     bool SendItem(Player* player, uint32 itemId) {
+=======
+    bool asd(Player* player, uint32 itemId) {
+>>>>>>> a39704308e (Create and send items on login)
         int32 count = 1;
 
         // Adding items
@@ -173,6 +187,47 @@ public:
         return true;
     }
 
+<<<<<<< HEAD
+=======
+    bool test(Player* player) {
+
+        // extract items
+        typedef std::pair<uint32, uint32> ItemPair;
+        typedef std::list< ItemPair > ItemPairs;
+        ItemPairs items;
+
+        MailSender sender(MAIL_NORMAL, player->GetSession() ? player->GetGUID().GetCounter() : 0, MAIL_STATIONERY_GM);
+
+        // fill mail
+        MailDraft draft("test subject", "test text");
+
+        SQLTransaction trans = CharacterDatabase.BeginTransaction();
+
+        //for(ItemPairs::const_iterator itr = items.begin(); itr != items.end(); ++itr)
+        //{
+        //    if(Item* item = Item::CreateItem(itr->first, itr->second, player->GetSession() ? player : 0))
+        //    {
+        //        item->SaveToDB(trans);              // Save to prevent being lost at next mail load. If send fails, the item will be deleted.
+        //        draft.AddItem(item);
+        //    }
+        //}
+
+        Item* item = Item::CreateItem(127, 1, player);
+        //item->CreateItem(127, 1, player);
+
+        item->SaveToDB(trans);
+
+        draft.AddItem(item);
+
+        draft.SendMailTo(trans, MailReceiver(player, player->GetGUID().GetCounter()), sender);
+        CharacterDatabase.CommitTransaction(trans);
+
+        std::string nameLink = player->GetName();
+        player->Say("MAIL SENT", LANG_UNIVERSAL);
+        return true;
+    }
+
+>>>>>>> a39704308e (Create and send items on login)
     void OnGossipSelect(Player* player, uint32 menu_id, uint32 /*sender*/, uint32 action) override {
         if(menu_id != MENU_ID) { // Not the menu coded here? stop.
             return;
@@ -272,11 +327,13 @@ public:
 
             break;
         case SPEC_DRUID_BALANCE_ACTION:
+            player->Say("Sending druid balance gear", LANG_UNIVERSAL);
             ClearGossipMenuFor(player);
             CloseGossipMenuFor(player);
             SendDruidBalanceGear(player);
             break;
         case SPEC_DRUID_FERAL_ACTION:
+            player->Say("Sending druid feral gear", LANG_UNIVERSAL);
             ClearGossipMenuFor(player);
             CloseGossipMenuFor(player);
             SendDruidFeralGear(player);
@@ -353,6 +410,7 @@ public:
 
     void SetGossipMenuFalse(Player* player) {
         CharacterDatabase.PQuery("UPDATE " + DB_TABLE + " SET " + DB_NAME + "=0 WHERE guid = " + std::to_string(player->GetGUID()));
+<<<<<<< HEAD
     }
 
     bool SendPaladinTankingGear(Player* player) {
@@ -360,6 +418,18 @@ public:
         for(int itemId : PALADIN_TANK_GEAR) {
             SendItem(player, itemId);
         }
+=======
+
+    }
+
+    bool SendPaladinTankingGear(Player* player) {
+        //auto result = CharacterDatabase.PQuery("SELECT MAX(id) from mail");
+        //int mailId = result->Fetch()[0].GetInt8() + 1;
+        //CharacterDatabase.PQuery("INSERT INTO mail (id, stationery, sender, receiver, SUBJECT, BODY, has_items, expire_time, deliver_time) VALUES (" + std::to_string(mailId) +", 61, 62, 62, \"bites\", \"dust\", 1, 1581032500, 1573256500);");
+        player->Say("Sending paladin tank gear", LANG_UNIVERSAL);
+        test(player);
+        //player->LoadFromDB(player->GetGUID(), new SQLQueryHolder())
+>>>>>>> a39704308e (Create and send items on login)
         SetGossipMenuFalse(player);
         return true;
     }
@@ -367,40 +437,53 @@ public:
 <<<<<<< HEAD
     bool SendPaladinHealingGear(Player* player) {
         player->Say("Sending paladin heal gear", LANG_UNIVERSAL);
+<<<<<<< HEAD
         for(int itemId : PALADIN_HEAL_GEAR) {
             SendItem(player, itemId);
         }
+=======
+>>>>>>> a39704308e (Create and send items on login)
         SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendPaladinDPSGear(Player* player) {
         player->Say("Sending paladin DPS gear", LANG_UNIVERSAL);
+<<<<<<< HEAD
         for(int itemId : PALADIN_DPS_GEAR) {
             SendItem(player, itemId);
         }
+=======
+>>>>>>> a39704308e (Create and send items on login)
         SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendDruidHealingGear(Player* player) {
         player->Say("Sending druid heal gear", LANG_UNIVERSAL);
+<<<<<<< HEAD
         for(int itemId : DRUID_HEAL_GEAR) {
             SendItem(player, itemId);
         }
+=======
+>>>>>>> a39704308e (Create and send items on login)
         SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendDruidTankingGear(Player* player) {
         player->Say("Sending druid tank gear", LANG_UNIVERSAL);
+<<<<<<< HEAD
         for(int itemId : DRUID_TANK_GEAR) {
             SendItem(player, itemId);
         }
+=======
+>>>>>>> a39704308e (Create and send items on login)
         SetGossipMenuFalse(player);
         return true;
     }
 
+<<<<<<< HEAD
     bool SendDruidBalanceGear(Player* player) {
         player->Say("Sending druid DPS gear", LANG_UNIVERSAL);
         for(int itemId : DRUID_BALANCE_GEAR) {
@@ -415,75 +498,101 @@ public:
         for(int itemId : DRUID_FERAL_GEAR) {
             SendItem(player, itemId);
         }
+=======
+    bool SendDruidDPSGear(Player* player) {
+        player->Say("Sending druid DPS gear", LANG_UNIVERSAL);
+>>>>>>> a39704308e (Create and send items on login)
         SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendPriestHealingGear(Player* player) {
         player->Say("Sending priest heal gear", LANG_UNIVERSAL);
+<<<<<<< HEAD
         for(int itemId : PRIEST_HEAL_GEAR) {
             SendItem(player, itemId);
         }
+=======
+>>>>>>> a39704308e (Create and send items on login)
         SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendPriestDPSGear(Player* player) {
         player->Say("Sending priest DPS gear", LANG_UNIVERSAL);
+<<<<<<< HEAD
         for(int itemId : PRIEST_DPS_GEAR) {
             SendItem(player, itemId);
         }
+=======
+>>>>>>> a39704308e (Create and send items on login)
         SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendShamanHealingGear(Player* player) {
         player->Say("Sending shaman heal gear", LANG_UNIVERSAL);
+<<<<<<< HEAD
         for(int itemId : SHAMAN_HEAL_GEAR) {
             SendItem(player, itemId);
         }
+=======
+>>>>>>> a39704308e (Create and send items on login)
         SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendShamanDPSGear(Player* player) {
         player->Say("Sending shaman DPS gear", LANG_UNIVERSAL);
+<<<<<<< HEAD
         for(int itemId : SHAMAN_DPS_GEAR) {
             SendItem(player, itemId);
         }
+=======
+>>>>>>> a39704308e (Create and send items on login)
         SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendWarriorTankingGear(Player* player) {
         player->Say("Sending warrior tank gear", LANG_UNIVERSAL);
+<<<<<<< HEAD
         for(int itemId : WARRIOR_TANK_GEAR) {
             SendItem(player, itemId);
         }
+=======
+>>>>>>> a39704308e (Create and send items on login)
         SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendWarriorDPSGear(Player* player) {
         player->Say("Sending warrior DPS gear", LANG_UNIVERSAL);
+<<<<<<< HEAD
         for(int itemId : WARRIOR_DPS_GEAR) {
             SendItem(player, itemId);
         }
+=======
+>>>>>>> a39704308e (Create and send items on login)
         SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendDKTankingGear(Player* player) {
         player->Say("Sending DK tank gear", LANG_UNIVERSAL);
+<<<<<<< HEAD
         for(int itemId : DK_TANK_GEAR) {
             SendItem(player, itemId);
         }
+=======
+>>>>>>> a39704308e (Create and send items on login)
         SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendDKDPSGear(Player* player) {
         player->Say("Sending DK DPS gear", LANG_UNIVERSAL);
+<<<<<<< HEAD
         for(int itemId : DK_DPS_GEAR) {
             SendItem(player, itemId);
 =======
@@ -506,6 +615,8 @@ public:
             break;
 >>>>>>> 96809dd891 (Skipped cinematic into and display gossip)
         }
+=======
+>>>>>>> a39704308e (Create and send items on login)
         SetGossipMenuFalse(player);
         return true;
     }
