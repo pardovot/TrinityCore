@@ -37,6 +37,7 @@
 #include "UpdateData.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
+#include <iostream>
 
 void AddItemsSetItem(Player* player, Item* item)
 {
