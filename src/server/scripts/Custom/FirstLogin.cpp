@@ -33,13 +33,22 @@ enum Options {
     TANK_ACTION = 3,
     SPEC_DRUID_BALANCE_ACTION = 4,
     SPEC_DRUID_FERAL_ACTION = 5,
-    /*
-    JOIN_QUE_ACTION = 5,
-    LEAVE_QUE_ACTION = 6,
-    QUE_STATUS_ACTION = 7,
-    GET_CLASS_ACTION = 8
-    */
 };
+
+//enum WARRIOR_GEAR {
+//    CHEST = 1,
+//    FEET = 2,
+//    HANDS = 3,
+//    HANDS = 4,
+//    HEAD = 5,
+//    LEGS = 6,
+//    SHOULDER = 7,
+//    WAIST = 8,
+//    WRIST = 9,
+//    RING = 10,
+//    TRINKET = 11,
+//    WEAPON = 12
+//};
 
 /*
 Classes uint8 values:
@@ -79,19 +88,28 @@ warlock
 
 class FirstLogin : public PlayerScript {
 private:
+    int PALADIN_DPS_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
+    int PALADIN_TANK_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
+    int PALADIN_HEAL_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
+    int DRUID_BALANCE_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
+    int DRUID_FERAL_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
+    int DRUID_TANK_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
+    int DRUID_HEAL_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
+    int PRIEST_DPS_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
+    int PRIEST_HEAL_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
+    int SHAMAN_DPS_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
+    int SHAMAN_HEAL_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
+    int WARRIOR_DPS_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
+    int WARRIOR_TANK_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
+    int DK_DPS_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
+    int DK_TANK_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
+
     std::string DB_NAME = "gossip_menu";
     std::string DB_TABLE = "characters";
 public:
     FirstLogin() : PlayerScript("FirstLogin") {}
 
     void OnLogin(Player* player, bool firstLogin) override {
-        asd(player, 127);
-        //ItemPosCountVec dest;
-
-        //Item* item = player->StoreNewItem(dest, 127, true, GenerateItemRandomPropertyId(127));
-        //Item* item = Item::CreateItem(127, 1, player);
-        //player->SendNewItem(item, 1, false, true);
-        //player->SendNewItem(item, 1, true, false);
         auto result = CharacterDatabase.PQuery("SELECT " + DB_NAME + " FROM " + DB_TABLE + " WHERE guid=" + std::to_string(player->GetGUID().GetCounter()));
         bool value;
         if(result) {
@@ -114,7 +132,7 @@ public:
         }
     }
 
-    bool asd(Player* player, uint32 itemId) {
+    bool SendItem(Player* player, uint32 itemId) {
         int32 count = 1;
 
         // Adding items
@@ -141,58 +159,22 @@ public:
         return true;
     }
 
-    bool test(Player* player) {
-
-        // extract items
-        typedef std::pair<uint32, uint32> ItemPair;
-        typedef std::list< ItemPair > ItemPairs;
-        ItemPairs items;
-
-        MailSender sender(MAIL_NORMAL, player->GetSession() ? player->GetGUID().GetCounter() : 0, MAIL_STATIONERY_GM);
-
-        // fill mail
-        MailDraft draft("test subject", "test text");
-
-        SQLTransaction trans = CharacterDatabase.BeginTransaction();
-
-        //for(ItemPairs::const_iterator itr = items.begin(); itr != items.end(); ++itr)
-        //{
-        //    if(Item* item = Item::CreateItem(itr->first, itr->second, player->GetSession() ? player : 0))
-        //    {
-        //        item->SaveToDB(trans);              // Save to prevent being lost at next mail load. If send fails, the item will be deleted.
-        //        draft.AddItem(item);
-        //    }
-        //}
-
-        Item* item = Item::CreateItem(127, 1, player);
-        //item->CreateItem(127, 1, player);
-
-        item->SaveToDB(trans);
-
-        draft.AddItem(item);
-
-        draft.SendMailTo(trans, MailReceiver(player, player->GetGUID().GetCounter()), sender);
-        CharacterDatabase.CommitTransaction(trans);
-
-        std::string nameLink = player->GetName();
-        player->Say("MAIL SENT", LANG_UNIVERSAL);
-        return true;
-    }
-
     void OnGossipSelect(Player* player, uint32 menu_id, uint32 /*sender*/, uint32 action) override {
         if(menu_id != MENU_ID) { // Not the menu coded here? stop.
             return;
         }
 
-        ClearGossipMenuFor(player);
-        CloseGossipMenuFor(player);
         switch(action) {
         case DPS_ACTION:
+            ClearGossipMenuFor(player);
+            CloseGossipMenuFor(player);
+
             // If the class is Druid send another gossip to choose the spec(balance/feral).
             if(player->GetClass() == 11) {
                 SelectDruidSpec(player);
             } else {
                 switch(player->GetClass()) {
+
                     // Warrior gear
                 case 1:
                     SendWarriorDPSGear(player);
@@ -276,16 +258,14 @@ public:
 
             break;
         case SPEC_DRUID_BALANCE_ACTION:
-            player->Say("Sending druid balance gear", LANG_UNIVERSAL);
             ClearGossipMenuFor(player);
             CloseGossipMenuFor(player);
-            SetGossipMenuFalse(player);
+            SendDruidBalanceGear(player);
             break;
         case SPEC_DRUID_FERAL_ACTION:
-            player->Say("Sending druid feral gear", LANG_UNIVERSAL);
             ClearGossipMenuFor(player);
             CloseGossipMenuFor(player);
-            SetGossipMenuFalse(player);
+            SendDruidFeralGear(player);
             break;
         }
     }
@@ -363,90 +343,136 @@ public:
     }
 
     bool SendPaladinTankingGear(Player* player) {
-        //auto result = CharacterDatabase.PQuery("SELECT MAX(id) from mail");
-        //int mailId = result->Fetch()[0].GetInt8() + 1;
-        //CharacterDatabase.PQuery("INSERT INTO mail (id, stationery, sender, receiver, SUBJECT, BODY, has_items, expire_time, deliver_time) VALUES (" + std::to_string(mailId) +", 61, 62, 62, \"bites\", \"dust\", 1, 1581032500, 1573256500);");
         player->Say("Sending paladin tank gear", LANG_UNIVERSAL);
-        test(player);
-        //player->LoadFromDB(player->GetGUID(), new SQLQueryHolder())
+        for(int itemId : PALADIN_TANK_GEAR) {
+            SendItem(player, itemId);
+        }
         SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendPaladinHealingGear(Player* player) {
         player->Say("Sending paladin heal gear", LANG_UNIVERSAL);
+        for(int itemId : PALADIN_HEAL_GEAR) {
+            SendItem(player, itemId);
+        }
         SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendPaladinDPSGear(Player* player) {
         player->Say("Sending paladin DPS gear", LANG_UNIVERSAL);
+        for(int itemId : PALADIN_DPS_GEAR) {
+            SendItem(player, itemId);
+        }
         SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendDruidHealingGear(Player* player) {
         player->Say("Sending druid heal gear", LANG_UNIVERSAL);
+        for(int itemId : DRUID_HEAL_GEAR) {
+            SendItem(player, itemId);
+        }
         SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendDruidTankingGear(Player* player) {
         player->Say("Sending druid tank gear", LANG_UNIVERSAL);
+        for(int itemId : DRUID_TANK_GEAR) {
+            SendItem(player, itemId);
+        }
         SetGossipMenuFalse(player);
         return true;
     }
 
-    bool SendDruidDPSGear(Player* player) {
+    bool SendDruidBalanceGear(Player* player) {
         player->Say("Sending druid DPS gear", LANG_UNIVERSAL);
+        for(int itemId : DRUID_BALANCE_GEAR) {
+            SendItem(player, itemId);
+        }
+        SetGossipMenuFalse(player);
+        return true;
+    }
+
+    bool SendDruidFeralGear(Player* player) {
+        player->Say("Sending druid DPS gear", LANG_UNIVERSAL);
+        for(int itemId : DRUID_FERAL_GEAR) {
+            SendItem(player, itemId);
+        }
         SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendPriestHealingGear(Player* player) {
         player->Say("Sending priest heal gear", LANG_UNIVERSAL);
+        for(int itemId : PRIEST_HEAL_GEAR) {
+            SendItem(player, itemId);
+        }
         SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendPriestDPSGear(Player* player) {
         player->Say("Sending priest DPS gear", LANG_UNIVERSAL);
+        for(int itemId : PRIEST_DPS_GEAR) {
+            SendItem(player, itemId);
+        }
         SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendShamanHealingGear(Player* player) {
         player->Say("Sending shaman heal gear", LANG_UNIVERSAL);
+        for(int itemId : SHAMAN_HEAL_GEAR) {
+            SendItem(player, itemId);
+        }
         SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendShamanDPSGear(Player* player) {
         player->Say("Sending shaman DPS gear", LANG_UNIVERSAL);
+        for(int itemId : SHAMAN_DPS_GEAR) {
+            SendItem(player, itemId);
+        }
         SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendWarriorTankingGear(Player* player) {
         player->Say("Sending warrior tank gear", LANG_UNIVERSAL);
+        for(int itemId : WARRIOR_TANK_GEAR) {
+            SendItem(player, itemId);
+        }
         SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendWarriorDPSGear(Player* player) {
         player->Say("Sending warrior DPS gear", LANG_UNIVERSAL);
+        for(int itemId : WARRIOR_DPS_GEAR) {
+            SendItem(player, itemId);
+        }
         SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendDKTankingGear(Player* player) {
         player->Say("Sending DK tank gear", LANG_UNIVERSAL);
+        for(int itemId : DK_TANK_GEAR) {
+            SendItem(player, itemId);
+        }
         SetGossipMenuFalse(player);
         return true;
     }
 
     bool SendDKDPSGear(Player* player) {
         player->Say("Sending DK DPS gear", LANG_UNIVERSAL);
+        for(int itemId : DK_DPS_GEAR) {
+            SendItem(player, itemId);
+        }
         SetGossipMenuFalse(player);
         return true;
     }
