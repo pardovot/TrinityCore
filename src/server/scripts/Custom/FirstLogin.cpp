@@ -88,21 +88,21 @@ warlock
 
 class FirstLogin : public PlayerScript {
 private:
-    int PALADIN_DPS_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
-    int PALADIN_TANK_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
-    int PALADIN_HEAL_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
-    int DRUID_BALANCE_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
-    int DRUID_FERAL_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
-    int DRUID_TANK_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
-    int DRUID_HEAL_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
-    int PRIEST_DPS_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
-    int PRIEST_HEAL_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
-    int SHAMAN_DPS_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
-    int SHAMAN_HEAL_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
-    int WARRIOR_DPS_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
-    int WARRIOR_TANK_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
-    int DK_DPS_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
-    int DK_TANK_GEAR[9] = {43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516};
+    int PALADIN_DPS_GEAR[9] = { 43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516 };
+    int PALADIN_TANK_GEAR[9] = { 43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516 };
+    int PALADIN_HEAL_GEAR[9] = { 43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516 };
+    int DRUID_BALANCE_GEAR[9] = { 43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516 };
+    int DRUID_FERAL_GEAR[9] = { 43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516 };
+    int DRUID_TANK_GEAR[9] = { 43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516 };
+    int DRUID_HEAL_GEAR[9] = { 43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516 };
+    int PRIEST_DPS_GEAR[9] = { 43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516 };
+    int PRIEST_HEAL_GEAR[9] = { 43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516 };
+    int SHAMAN_DPS_GEAR[9] = { 43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516 };
+    int SHAMAN_HEAL_GEAR[9] = { 43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516 };
+    int WARRIOR_DPS_GEAR[9] = { 43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516 };
+    int WARRIOR_TANK_GEAR[9] = { 43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516 };
+    int DK_DPS_GEAR[9] = { 43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516 };
+    int DK_TANK_GEAR[9] = { 43973, 43972, 43975, 43971, 43974, 43970, 43969, 24252, 41516 };
 
     std::string DB_NAME = "gossip_menu";
     std::string DB_TABLE = "characters";
@@ -121,10 +121,15 @@ public:
             uint8 playerClass = player->GetClass();
 
             if(playerClass == 2 || playerClass == 11) {
+                // Send gossip menu for paladin and druid.
                 SendGossipMenuDHT(player);
+
             } else if(playerClass == 5 || playerClass == 7) {
+                // Send gossip menu for priest and shaman.
                 SendGossipMenuHD(player);
+
             } else if(playerClass == 1 || playerClass == 6) {
+                // Send gossip menu for warrior and DK.
                 SendGossipMenuTD(player);
             } else {
 
@@ -339,7 +344,6 @@ public:
 
     void SetGossipMenuFalse(Player* player) {
         CharacterDatabase.PQuery("UPDATE " + DB_TABLE + " SET " + DB_NAME + "=0 WHERE guid = " + std::to_string(player->GetGUID()));
-
     }
 
     bool SendPaladinTankingGear(Player* player) {
