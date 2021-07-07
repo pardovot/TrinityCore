@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2006-2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -145,9 +144,9 @@ class boss_mandokir : public CreatureScript
                 me->SetImmuneToAll(false);
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 events.ScheduleEvent(EVENT_OVERPOWER, 7s, 9s);
                 events.ScheduleEvent(EVENT_MORTAL_STRIKE, 12s, 18s);
                 events.ScheduleEvent(EVENT_WHIRLWIND, 24s, 30s);
@@ -158,7 +157,7 @@ class boss_mandokir : public CreatureScript
                 me->Dismount();
 
                 // Summon Ohgan (Spell missing) TEMP HACK
-                me->SummonCreature(NPC_OHGAN, me->GetPositionX() - 3, me->GetPositionY(), me->GetPositionZ(), me->GetOrientation(), TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 35000);
+                me->SummonCreature(NPC_OHGAN, me->GetPositionX() - 3, me->GetPositionY(), me->GetPositionZ(), me->GetOrientation(), TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 35s);
                 // Summon Chained Spirits
                 for (int i = 0; i < CHAINED_SPIRT_COUNT; ++i)
                     me->SummonCreature(NPC_CHAINED_SPIRT, PosSummonChainedSpirits[i], TEMPSUMMON_CORPSE_DESPAWN);
@@ -259,7 +258,7 @@ class boss_mandokir : public CreatureScript
                             events.ScheduleEvent(EVENT_WHIRLWIND, 22s, 26s);
                             break;
                         case EVENT_WATCH_PLAYER:
-                            if (Unit* player = SelectTarget(SELECT_TARGET_RANDOM, 0, 100, true))
+                            if (Unit* player = SelectTarget(SelectTargetMethod::Random, 0, 100, true))
                             {
                                 DoCast(player, SPELL_WATCH);
                                 Talk(SAY_WATCH, player);
@@ -267,7 +266,7 @@ class boss_mandokir : public CreatureScript
                             events.ScheduleEvent(EVENT_WATCH_PLAYER, 12s, 15s);
                             break;
                         case EVENT_CHARGE_PLAYER:
-                            DoCast(SelectTarget(SELECT_TARGET_RANDOM, 0, 40, true), SPELL_CHARGE);
+                            DoCast(SelectTarget(SelectTargetMethod::Random, 0, 40, true), SPELL_CHARGE);
                             events.ScheduleEvent(EVENT_CHARGE_PLAYER, 22s, 30s);
                             break;
                         default:
@@ -417,6 +416,7 @@ class npc_vilebranch_speaker : public CreatureScript
         }
 };
 
+// 24314 - Threatening Gaze
 class spell_threatening_gaze : public SpellScriptLoader
 {
     public:

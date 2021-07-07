@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -174,7 +174,7 @@ bool OPvPCapturePoint::DelCreature(uint32 type)
     TC_LOG_DEBUG("outdoorpvp", "deleting opvp creature type %u", type);
     m_CreatureTypes[m_Creatures[type]] = 0;
     m_Creatures[type] = 0;
-    
+
     return Creature::DeleteFromDB(spawnId);
 }
 
@@ -183,10 +183,10 @@ bool OPvPCapturePoint::DelObject(uint32 type)
     uint32 spawnId = m_Objects[type];
     if (!spawnId)
         return false;
-    
+
     m_ObjectTypes[m_Objects[type]] = 0;
     m_Objects[type] = 0;
-    
+
     return GameObject::DeleteFromDB(spawnId);
 }
 
@@ -658,7 +658,7 @@ void OutdoorPvP::BroadcastWorker(Worker& _worker, uint32 zoneId)
 void OutdoorPvP::SetMapFromZone(uint32 zone)
 {
     AreaTableEntry const* areaTable = sAreaTableStore.AssertEntry(zone);
-    Map* map = sMapMgr->CreateBaseMap(areaTable->mapid);
+    Map* map = sMapMgr->CreateBaseMap(areaTable->ContinentID);
     ASSERT(!map->Instanceable());
     m_map = map;
 }

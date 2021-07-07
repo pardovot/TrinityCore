@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2006-2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -87,9 +86,9 @@ class boss_jindo : public CreatureScript
                 _JustDied();
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 events.ScheduleEvent(EVENT_BRAIN_WASH_TOTEM, 20s);
                 events.ScheduleEvent(EVENT_POWERFULL_HEALING_WARD, 15s);
                 events.ScheduleEvent(EVENT_HEX, 8s);
@@ -131,7 +130,7 @@ class boss_jindo : public CreatureScript
                             break;
                         case EVENT_DELUSIONS_OF_JINDO:
                             // Casting the delusion curse with a shade so shade will attack the same target with the curse.
-                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
+                            if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 100.0f, true))
                             {
                                 DoCast(target, SPELL_SHADE_OF_JINDO, true);
                                 DoCast(target, SPELL_DELUSIONS_OF_JINDO);
@@ -140,7 +139,7 @@ class boss_jindo : public CreatureScript
                             break;
                         case EVENT_TELEPORT:
                             // Teleports a random player and spawns 9 Sacrificed Trolls to attack player
-                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
+                            if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 100.0f, true))
                             {
                                 DoTeleportPlayer(target, TeleportLoc.GetPositionX(), TeleportLoc.GetPositionY(), TeleportLoc.GetPositionZ(), TeleportLoc.GetOrientation());
                                 if (GetThreat(me->GetVictim()))
@@ -148,7 +147,7 @@ class boss_jindo : public CreatureScript
 
                                 // Summon a formation of trolls
                                 for (uint8 i = 0; i < 10; ++i)
-                                    if (TempSummon* sacrificedTroll = me->SummonCreature(NPC_SACRIFICED_TROLL, Formation[i], TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 15000))
+                                    if (TempSummon* sacrificedTroll = me->SummonCreature(NPC_SACRIFICED_TROLL, Formation[i], TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 15s))
                                         sacrificedTroll->AI()->AttackStart(target);
                             }
                             events.ScheduleEvent(EVENT_TELEPORT, 15s, 23s);

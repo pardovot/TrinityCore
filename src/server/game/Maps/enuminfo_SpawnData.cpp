@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -20,9 +20,7 @@
 #include "SmartEnum.h"
 #include <stdexcept>
 
-namespace Trinity
-{
-namespace Impl
+namespace Trinity::Impl::EnumUtilsImpl
 {
 
 /*******************************************************************\
@@ -52,5 +50,15 @@ TC_API_EXPORT SpawnObjectType EnumUtils<SpawnObjectType>::FromIndex(size_t index
         default: throw std::out_of_range("index");
     }
 }
+
+template <>
+TC_API_EXPORT size_t EnumUtils<SpawnObjectType>::ToIndex(SpawnObjectType value)
+{
+    switch (value)
+    {
+        case SPAWN_TYPE_CREATURE: return 0;
+        case SPAWN_TYPE_GAMEOBJECT: return 1;
+        default: throw std::out_of_range("value");
+    }
 }
 }

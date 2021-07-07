@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -88,7 +88,7 @@ public:
             DoMeleeAttackIfReady();
         }
 
-        bool GossipSelect(Player* player, uint32 menuId, uint32 gossipListId) override
+        bool OnGossipSelect(Player* player, uint32 menuId, uint32 gossipListId) override
         {
             if (menuId == GOSSIP_ID && gossipListId == GOSSIP_OPTION_ID)
             {
@@ -99,7 +99,7 @@ public:
             return false;
         }
 
-        void QuestAccept(Player* /*player*/, Quest const* quest) override
+        void OnQuestAccept(Player* /*player*/, Quest const* quest) override
         {
             if (quest->GetQuestId() == QUEST_BITTER_DEPARTURE)
                 Talk(SAY_QUEST_ACCEPT);
@@ -131,7 +131,7 @@ public:
     {
         npc_roxi_ramrocketAI(Creature* creature) : ScriptedAI(creature) { }
 
-        bool GossipHello(Player* player) override
+        bool OnGossipHello(Player* player) override
         {
             //Quest Menu
             if (me->IsQuestGiver())
@@ -150,7 +150,7 @@ public:
             return true;
         }
 
-        bool GossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId) override
+        bool OnGossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId) override
         {
             uint32 const action = player->PlayerTalkClass->GetGossipOptionAction(gossipListId);
             ClearGossipMenuFor(player);
@@ -225,15 +225,19 @@ public:
                 me->DespawnOrUnsummon();
         }
 
-        void SpellHit(Unit* caster, SpellInfo const* spell) override
+        void SpellHit(WorldObject* caster, SpellInfo const* spellInfo) override
         {
-            if (spell->Id != SPELL_ICE_LANCE)
+            Unit* unitCaster = caster->ToUnit();
+            if (!unitCaster)
                 return;
 
-            if (caster->GetVehicleKit()->GetAvailableSeatCount() != 0)
+            if (spellInfo->Id != SPELL_ICE_LANCE)
+                return;
+
+            if (unitCaster->GetVehicleKit()->GetAvailableSeatCount() != 0)
             {
                 me->CastSpell(me, SPELL_FREE_PRISONER, true);
-                me->CastSpell(caster, SPELL_RIDE_DRAKE, true);
+                me->CastSpell(unitCaster, SPELL_RIDE_DRAKE, true);
                 me->CastSpell(me, SPELL_SHARD_IMPACT, true);
                 freed = true;
             }
@@ -489,11 +493,11 @@ public:
             objectCounter = 0;
         }
 
-        bool GossipSelect(Player* player, uint32 /*menuId*/, uint32 /*gossipListId*/) override
+        bool OnGossipSelect(Player* player, uint32 /*menuId*/, uint32 /*gossipListId*/) override
         {
             CloseGossipMenuFor(player);
             playerGUID = player->GetGUID();
-            events.ScheduleEvent(EVENT_SCRIPT_1, 100);
+            events.ScheduleEvent(EVENT_SCRIPT_1, 100ms);
             return false;
         }
 
@@ -509,18 +513,18 @@ public:
                         if (Player* player = ObjectAccessor::GetPlayer(*me, playerGUID))
                             Talk(SAY_BRANN_1, player);
                         me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP | UNIT_NPC_FLAG_QUESTGIVER);
-                        if (Creature* voice = me->SummonCreature(NPC_A_DISTANT_VOICE, 7863.43f, -1396.585f, 1538.076f, 2.949606f, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 49000))
+                        if (Creature* voice = me->SummonCreature(NPC_A_DISTANT_VOICE, 7863.43f, -1396.585f, 1538.076f, 2.949606f, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 49s))
                             voiceGUID = voice->GetGUID();
-                        events.ScheduleEvent(EVENT_SCRIPT_2, 4000);
+                        events.ScheduleEvent(EVENT_SCRIPT_2, 4s);
                         break;
                     case EVENT_SCRIPT_2:
                         me->SetWalk(true);
                         me->GetMotionMaster()->MovePoint(0, 7861.488f, -1396.376f, 1534.059f, false);
-                        events.ScheduleEvent(EVENT_SCRIPT_3, 6000);
+                        events.ScheduleEvent(EVENT_SCRIPT_3, 6s);
                         break;
                     case EVENT_SCRIPT_3:
                         me->SetUInt32Value(UNIT_NPC_EMOTESTATE, EMOTE_STATE_WORK_MINING);
-                        events.ScheduleEvent(EVENT_SCRIPT_4, 6000);
+                        events.ScheduleEvent(EVENT_SCRIPT_4, 6s);
                         break;
                     case EVENT_SCRIPT_4:
                         me->SetUInt32Value(UNIT_NPC_EMOTESTATE, EMOTE_ONESHOT_NONE);
@@ -530,46 +534,46 @@ public:
                             if (Player* player = ObjectAccessor::GetPlayer(*me, playerGUID))
                                 voice->AI()->Talk(SAY_VOICE_1, player);
                         }
-                        if (GameObject* go = me->SummonGameObject(OBJECT_TOL_SIGNAL_1, 7860.273f, -1383.622f, 1538.302f, -1.658062f, QuaternionData(0.f, 0.f, -0.737277f, 0.6755905f), 0))
+                        if (GameObject* go = me->SummonGameObject(OBJECT_TOL_SIGNAL_1, 7860.273f, -1383.622f, 1538.302f, -1.658062f, QuaternionData(0.f, 0.f, -0.737277f, 0.6755905f), 0s))
                             objectGUID[objectCounter++] = go->GetGUID();
-                        events.ScheduleEvent(EVENT_SCRIPT_5, 6000);
+                        events.ScheduleEvent(EVENT_SCRIPT_5, 6s);
                         break;
                     case EVENT_SCRIPT_5:
                         if (Player* player = ObjectAccessor::GetPlayer(*me, playerGUID))
                             if (Creature* voice = ObjectAccessor::GetCreature(*me, voiceGUID))
                                 voice->AI()->Talk(SAY_VOICE_2, player);
-                        if (GameObject* go = me->SummonGameObject(OBJECT_TOL_SIGNAL_2, 7875.67f, -1387.266f, 1538.323f, -2.373644f, QuaternionData(0.f, 0.f, -0.9271832f, 0.3746083f), 0))
+                        if (GameObject* go = me->SummonGameObject(OBJECT_TOL_SIGNAL_2, 7875.67f, -1387.266f, 1538.323f, -2.373644f, QuaternionData(0.f, 0.f, -0.9271832f, 0.3746083f), 0s))
                             objectGUID[objectCounter++] = go->GetGUID();
-                        events.ScheduleEvent(EVENT_SCRIPT_6, 6000);
+                        events.ScheduleEvent(EVENT_SCRIPT_6, 6s);
                         break;
                     case EVENT_SCRIPT_6:
                         if (Player* player = ObjectAccessor::GetPlayer(*me, playerGUID))
                             if (Creature* voice = ObjectAccessor::GetCreature(*me, voiceGUID))
                                 voice->AI()->Talk(SAY_VOICE_3, player);
-                        if (GameObject* go = me->SummonGameObject(OBJECT_TOL_SIGNAL_3, 7879.212f, -1401.175f, 1538.279f, 2.967041f, QuaternionData(0.f, 0.f, 0.9961939f, 0.08716504f), 0))
+                        if (GameObject* go = me->SummonGameObject(OBJECT_TOL_SIGNAL_3, 7879.212f, -1401.175f, 1538.279f, 2.967041f, QuaternionData(0.f, 0.f, 0.9961939f, 0.08716504f), 0s))
                             objectGUID[objectCounter++] = go->GetGUID();
-                        events.ScheduleEvent(EVENT_SCRIPT_7, 6000);
+                        events.ScheduleEvent(EVENT_SCRIPT_7, 6s);
                         break;
                     case EVENT_SCRIPT_7:
                         if (Player* player = ObjectAccessor::GetPlayer(*me, playerGUID))
                             if (Creature* voice = ObjectAccessor::GetCreature(*me, voiceGUID))
                                 voice->AI()->Talk(SAY_VOICE_4, player);
-                        if (GameObject* go = me->SummonGameObject(OBJECT_TOL_SIGNAL_4, 7868.944f, -1411.18f, 1538.213f, 2.111848f, QuaternionData(0.f, 0.f, 0.8703556f, 0.4924237f), 0))
+                        if (GameObject* go = me->SummonGameObject(OBJECT_TOL_SIGNAL_4, 7868.944f, -1411.18f, 1538.213f, 2.111848f, QuaternionData(0.f, 0.f, 0.8703556f, 0.4924237f), 0s))
                             objectGUID[objectCounter++] = go->GetGUID();
-                        events.ScheduleEvent(EVENT_SCRIPT_8, 6000);
+                        events.ScheduleEvent(EVENT_SCRIPT_8, 6s);
                         break;
                     case EVENT_SCRIPT_8:
                         if (Player* player = ObjectAccessor::GetPlayer(*me, playerGUID))
                             if (Creature* voice = ObjectAccessor::GetCreature(*me, voiceGUID))
                                 voice->AI()->Talk(SAY_VOICE_5, player);
-                        if (GameObject* go = me->SummonGameObject(OBJECT_TOL_SIGNAL_5, 7855.11f, -1406.839f, 1538.42f, 1.151916f, QuaternionData(0.f, 0.f, 0.5446386f, 0.8386708f), 0))
+                        if (GameObject* go = me->SummonGameObject(OBJECT_TOL_SIGNAL_5, 7855.11f, -1406.839f, 1538.42f, 1.151916f, QuaternionData(0.f, 0.f, 0.5446386f, 0.8386708f), 0s))
                             objectGUID[objectCounter] = go->GetGUID();
-                        events.ScheduleEvent(EVENT_SCRIPT_9, 6000);
+                        events.ScheduleEvent(EVENT_SCRIPT_9, 6s);
                         break;
                     case EVENT_SCRIPT_9:
                         if (Creature* voice = ObjectAccessor::GetCreature(*me, voiceGUID))
                             voice->CastSpell(voice, SPELL_RESURRECTION);
-                        events.ScheduleEvent(EVENT_SCRIPT_10, 6000);
+                        events.ScheduleEvent(EVENT_SCRIPT_10, 6s);
                         break;
                     case EVENT_SCRIPT_10:
                         if (Player* player = ObjectAccessor::GetPlayer(*me, playerGUID))
@@ -577,7 +581,7 @@ public:
                             Talk(SAY_BRANN_2, player);
                             player->KilledMonsterCredit(me->GetEntry());
                         }
-                        events.ScheduleEvent(EVENT_SCRIPT_11, 6000);
+                        events.ScheduleEvent(EVENT_SCRIPT_11, 6s);
                         break;
                     case EVENT_SCRIPT_11:
                         me->SetFacingTo(2.932153f);
@@ -588,13 +592,13 @@ public:
                             if (GameObject* go = ObjectAccessor::GetGameObject(*me, objectGUID[i]))
                                 go->Delete();
 
-                        events.ScheduleEvent(EVENT_SCRIPT_12, 6000);
+                        events.ScheduleEvent(EVENT_SCRIPT_12, 6s);
                         break;
                     case EVENT_SCRIPT_12:
                         me->GetMotionMaster()->Clear();
                         me->SetWalk(false);
                         me->GetMotionMaster()->MovePoint(0, 7799.908f, -1413.561f, 1534.829f, false);
-                        events.ScheduleEvent(EVENT_SCRIPT_13, 10000);
+                        events.ScheduleEvent(EVENT_SCRIPT_13, 10s);
                         break;
                     case EVENT_SCRIPT_13:
                         me->DisappearAndDie();
@@ -750,7 +754,7 @@ class npc_wild_wyrm : public CreatureScript
                 }
             }
 
-            void SpellHit(Unit* caster, SpellInfo const* spellInfo) override
+            void SpellHit(WorldObject* caster, SpellInfo const* spellInfo) override
             {
                 if (_playerGuid || spellInfo->Id != SPELL_SPEAR_OF_HODIR)
                     return;
@@ -960,6 +964,7 @@ enum JokkumScriptcast
     EVENT_KROLMIR_9                  = 24,
 };
 
+// 61319 - Jokkum Scriptcast
 class spell_jokkum_scriptcast : public SpellScriptLoader
 {
     public: spell_jokkum_scriptcast() : SpellScriptLoader("spell_jokkum_scriptcast") { }
@@ -991,6 +996,7 @@ class spell_jokkum_scriptcast : public SpellScriptLoader
         }
 };
 
+// 56650 - Player Cast Veranus Summon
 class spell_veranus_summon : public SpellScriptLoader
 {
     public: spell_veranus_summon() : SpellScriptLoader("spell_veranus_summon") { }
@@ -1027,6 +1033,7 @@ enum CloseRift
     SPELL_DESPAWN_RIFT          = 61665
 };
 
+// 56763 - Close Rift
 class spell_close_rift : public SpellScriptLoader
 {
     public:
@@ -1060,38 +1067,6 @@ class spell_close_rift : public SpellScriptLoader
         AuraScript* GetAuraScript() const override
         {
             return new spell_close_rift_AuraScript();
-        }
-};
-
-// 60603 - Eject Passenger 1
-class spell_eject_passenger_wild_wyrm : public SpellScriptLoader
-{
-    public:
-        spell_eject_passenger_wild_wyrm() : SpellScriptLoader("spell_eject_passenger_wild_wyrm") { }
-
-        class spell_eject_passenger_wild_wyrm_SpellScript : public SpellScript
-        {
-            PrepareSpellScript(spell_eject_passenger_wild_wyrm_SpellScript);
-
-            bool Validate(SpellInfo const* /*spellInfo*/) override
-            {
-                return ValidateSpellInfo({ SPELL_FIGHT_WYRM });
-            }
-
-            void HandleScript(SpellEffIndex /*effIndex*/)
-            {
-                GetHitUnit()->RemoveAurasDueToSpell(SPELL_FIGHT_WYRM);
-            }
-
-            void Register() override
-            {
-                OnEffectHitTarget += SpellEffectFn(spell_eject_passenger_wild_wyrm_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
-            }
-        };
-
-        SpellScript* GetSpellScript() const override
-        {
-            return new spell_eject_passenger_wild_wyrm_SpellScript();
         }
 };
 
@@ -1381,13 +1356,13 @@ class spell_falling_dragon_feign_death : public SpellScriptLoader
 
             void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
-                GetTarget()->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_UNK_29);
+                GetTarget()->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PREVENT_EMOTES_FROM_CHAT_TEXT);
                 GetTarget()->SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_FEIGN_DEATH);
             }
 
             void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
-                GetTarget()->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_UNK_29);
+                GetTarget()->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PREVENT_EMOTES_FROM_CHAT_TEXT);
                 GetTarget()->RemoveFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_FEIGN_DEATH);
             }
 
@@ -1476,7 +1451,6 @@ void AddSC_storm_peaks()
     new spell_jokkum_scriptcast();
     new spell_veranus_summon();
     new spell_close_rift();
-    new spell_eject_passenger_wild_wyrm();
     new spell_grip();
     new spell_grab_on();
     new spell_loosen_grip<5>("spell_thrust_spear");

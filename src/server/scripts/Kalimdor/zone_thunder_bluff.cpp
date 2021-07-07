@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2006-2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -92,7 +91,7 @@ public:
 
             if (BerserkerChargeTimer <= diff)
             {
-                if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0))
+                if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0))
                     DoCast(target, SPELL_BERSERKER_CHARGE);
                 BerserkerChargeTimer = 25000;
             } else BerserkerChargeTimer -= diff;
@@ -124,7 +123,7 @@ public:
             DoMeleeAttackIfReady();
         }
 
-        bool GossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId) override
+        bool OnGossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId) override
         {
             uint32 const action = player->PlayerTalkClass->GetGossipOptionAction(gossipListId);
             ClearGossipMenuFor(player);
@@ -136,7 +135,7 @@ public:
             return true;
         }
 
-        bool GossipHello(Player* player) override
+        bool OnGossipHello(Player* player) override
         {
             if (me->IsQuestGiver())
                 player->PrepareQuestMenu(me->GetGUID());

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -117,12 +117,12 @@ void AddSC_feralas();
 void AddSC_moonglade();
 void AddSC_orgrimmar();
 void AddSC_silithus();
-void AddSC_stonetalon_mountains();
+// void AddSC_stonetalon_mountains();
 void AddSC_tanaris();
 void AddSC_the_barrens();
-void AddSC_thousand_needles();
+// void AddSC_thousand_needles();
 void AddSC_thunder_bluff();
-void AddSC_ungoro_crater();
+// void AddSC_ungoro_crater();
 void AddSC_winterspring();
 
 // The name of this function should match:
@@ -230,11 +230,11 @@ void AddKalimdorScripts()
     AddSC_moonglade();
     AddSC_orgrimmar();
     AddSC_silithus();
-    AddSC_stonetalon_mountains();
+    // AddSC_stonetalon_mountains();
     AddSC_tanaris();
     AddSC_the_barrens();
-    AddSC_thousand_needles();
+    // AddSC_thousand_needles();
     AddSC_thunder_bluff();
-    AddSC_ungoro_crater();
+    // AddSC_ungoro_crater();
     AddSC_winterspring();
 }

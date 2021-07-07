@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2006-2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -49,7 +48,6 @@ enum Misc
     MIN_KILLS                       = 30
 };
 
-
 //NOTE: there are 6 platforms
 //there should be 3 shatterers and 2 priestess on all platforms, total of 30 elites, else it won't work!
 //delete all other elites not on platforms! these mobs should only be on those platforms nowhere else.
@@ -74,7 +72,7 @@ class go_bridge_console : public GameObjectScript
 
             InstanceScript* instance;
 
-            bool GossipHello(Player* /*player*/) override
+            bool OnGossipHello(Player* /*player*/) override
             {
                 if (instance)
                     instance->SetData(DATA_CONTROL_CONSOLE, DONE);
@@ -95,7 +93,7 @@ class instance_serpent_shrine : public InstanceMapScript
 
         struct instance_serpentshrine_cavern_InstanceMapScript : public InstanceScript
         {
-            instance_serpentshrine_cavern_InstanceMapScript(Map* map) : InstanceScript(map)
+            instance_serpentshrine_cavern_InstanceMapScript(InstanceMap* map) : InstanceScript(map)
             {
                 SetHeaders(DataHeader);
                 memset(&m_auiEncounter, 0, sizeof(m_auiEncounter));
@@ -153,7 +151,7 @@ class instance_serpent_shrine : public InstanceMapScript
                                     //spawn frenzy
                                     if (DoSpawnFrenzy)
                                     {
-                                        if (Creature* frenzy = player->SummonCreature(NPC_COILFANG_FRENZY, player->GetPositionX(), player->GetPositionY(), player->GetPositionZ(), player->GetOrientation(), TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 2000))
+                                        if (Creature* frenzy = player->SummonCreature(NPC_COILFANG_FRENZY, player->GetPositionX(), player->GetPositionY(), player->GetPositionZ(), player->GetOrientation(), TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 2s))
                                         {
                                             frenzy->Attack(player, false);
                                             frenzy->SetSwim(true);

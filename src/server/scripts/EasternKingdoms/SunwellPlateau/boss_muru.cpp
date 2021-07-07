@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -276,9 +276,9 @@ public:
             });
         }
 
-        void JustEngagedWith(Unit* /*who*/) override
+        void JustEngagedWith(Unit* who) override
         {
-            _JustEngagedWith();
+            BossAI::JustEngagedWith(who);
             DoCast(me, SPELL_OPEN_PORTAL_PERIODIC, true);
             DoCast(me, SPELL_DARKNESS_PERIODIC, true);
             DoCast(me, SPELL_NEGATIVE_ENERGY_PERIODIC, true);
@@ -350,12 +350,12 @@ public:
         {
             DoCast(summon, SPELL_SUMMON_VOID_SENTINEL_SUMMONER_VISUAL, true);
 
-            summon->m_Events.AddEvent(new VoidSpawnSummon(summon), summon->m_Events.CalculateTime(1500));
+            summon->m_Events.AddEvent(new VoidSpawnSummon(summon), summon->m_Events.CalculateTime(1500ms));
         }
 
-        void SpellHit(Unit* /*caster*/, SpellInfo const* spell) override
+        void SpellHit(WorldObject* /*caster*/, SpellInfo const* spellInfo) override
         {
-            switch (spell->Id)
+            switch (spellInfo->Id)
             {
                 case SPELL_OPEN_ALL_PORTALS:
                     DoCastAOE(SPELL_OPEN_PORTAL, true);
@@ -412,7 +412,7 @@ public:
                 me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
 
                 if (Creature* _summoner = ObjectAccessor::GetCreature(*me, _summonerGUID))
-                    if (Unit* target = _summoner->AI()->SelectTarget(SELECT_TARGET_RANDOM, 0))
+                    if (Unit* target = _summoner->AI()->SelectTarget(SelectTargetMethod::Random, 0))
                         AttackStart(target);
             });
 
@@ -572,6 +572,7 @@ public:
     }
 };
 
+// 46050 - Summon Blood Elves Script
 class spell_summon_blood_elves_script : SpellScriptLoader
 {
     public:
@@ -604,6 +605,7 @@ class spell_summon_blood_elves_script : SpellScriptLoader
         }
 };
 
+// 45996 - Darkness
 class spell_muru_darkness : SpellScriptLoader
 {
     public:
@@ -636,6 +638,7 @@ class spell_muru_darkness : SpellScriptLoader
         }
 };
 
+// 45934 - Dark Fiend
 class spell_dark_fiend_skin : public SpellScriptLoader
 {
     public:
@@ -656,7 +659,7 @@ class spell_dark_fiend_skin : public SpellScriptLoader
                     target->AttackStop();
                     target->StopMoving();
                     target->CastSpell(target, SPELL_DARKFIEND_VISUAL, true);
-                    target->DespawnOrUnsummon(3000);
+                    target->DespawnOrUnsummon(3s);
                 }
             }
 
@@ -672,6 +675,7 @@ class spell_dark_fiend_skin : public SpellScriptLoader
         }
 };
 
+// 46205 - Transform Visual Missile Periodic
 class spell_transform_visual_missile_periodic : public SpellScriptLoader
 {
     public:
@@ -698,6 +702,7 @@ class spell_transform_visual_missile_periodic : public SpellScriptLoader
         }
 };
 
+// 46041 - Summon Blood Elves Periodic
 class spell_summon_blood_elves_periodic : public SpellScriptLoader
 {
     public:

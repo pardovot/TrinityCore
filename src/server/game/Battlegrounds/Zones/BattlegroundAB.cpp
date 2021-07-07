@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -157,10 +156,15 @@ void BattlegroundAB::PostUpdateImpl(uint32 diff)
                 if (!m_IsInformedNearVictory && m_TeamScores[team] > BG_AB_WARNING_NEAR_VICTORY_SCORE)
                 {
                     if (team == TEAM_ALLIANCE)
+                    {
                         SendBroadcastText(BG_AB_TEXT_ALLIANCE_NEAR_VICTORY, CHAT_MSG_BG_SYSTEM_NEUTRAL);
+                        PlaySoundToAll(BG_AB_SOUND_NEAR_VICTORY_ALLIANCE);
+                    }
                     else
+                    {
                         SendBroadcastText(BG_AB_TEXT_HORDE_NEAR_VICTORY, CHAT_MSG_BG_SYSTEM_NEUTRAL);
-                    PlaySoundToAll(BG_AB_SOUND_NEAR_VICTORY);
+                        PlaySoundToAll(BG_AB_SOUND_NEAR_VICTORY_HORDE);
+                    }
                     m_IsInformedNearVictory = true;
                 }
 
@@ -659,7 +663,7 @@ WorldSafeLocsEntry const* BattlegroundAB::GetClosestGraveyard(Player* player)
             WorldSafeLocsEntry const* entry = sWorldSafeLocsStore.LookupEntry(BG_AB_GraveyardIds[nodes[i]]);
             if (!entry)
                 continue;
-            float dist = (entry->x - plr_x)*(entry->x - plr_x)+(entry->y - plr_y)*(entry->y - plr_y);
+            float dist = (entry->Loc.X - plr_x)*(entry->Loc.X - plr_x)+(entry->Loc.Y - plr_y)*(entry->Loc.Y - plr_y);
             if (mindist > dist)
             {
                 mindist = dist;

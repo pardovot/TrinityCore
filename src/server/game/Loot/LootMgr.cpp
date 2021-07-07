@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -917,7 +916,7 @@ void LoadLootTemplates_Item()
     // remove real entries and check existence loot
     ItemTemplateContainer const& its = sObjectMgr->GetItemTemplateStore();
     for (auto const& itemTemplatePair : its)
-        if (lootIdSet.count(itemTemplatePair.first) > 0 && (itemTemplatePair.second.Flags & ITEM_FLAG_HAS_LOOT))
+        if (lootIdSet.count(itemTemplatePair.first) > 0 && itemTemplatePair.second.HasFlag(ITEM_FLAG_HAS_LOOT))
             lootIdSet.erase(itemTemplatePair.first);
 
     // output error for any still listed (not referenced from appropriate table) ids
@@ -942,7 +941,7 @@ void LoadLootTemplates_Milling()
     ItemTemplateContainer const& its = sObjectMgr->GetItemTemplateStore();
     for (auto const& itemTemplatePair : its)
     {
-        if (!(itemTemplatePair.second.Flags & ITEM_FLAG_IS_MILLABLE))
+        if (!itemTemplatePair.second.HasFlag(ITEM_FLAG_IS_MILLABLE))
             continue;
 
         if (lootIdSet.count(itemTemplatePair.first) > 0)
@@ -1005,7 +1004,7 @@ void LoadLootTemplates_Prospecting()
     ItemTemplateContainer const& its = sObjectMgr->GetItemTemplateStore();
     for (auto const& itemTemplatePair : its)
     {
-        if (!(itemTemplatePair.second.Flags & ITEM_FLAG_IS_PROSPECTABLE))
+        if (!itemTemplatePair.second.HasFlag(ITEM_FLAG_IS_PROSPECTABLE))
             continue;
 
         if (lootIdSet.count(itemTemplatePair.first) > 0)
@@ -1144,7 +1143,7 @@ void LoadLootTemplates_Reference()
     // output error for any still listed ids (not referenced from any loot table)
     LootTemplates_Reference.ReportUnusedIds(lootIdSet);
 
-    TC_LOG_INFO("server.loading", ">> Loaded refence loot templates in %u ms", GetMSTimeDiffToNow(oldMSTime));
+    TC_LOG_INFO("server.loading", ">> Loaded reference loot templates in %u ms", GetMSTimeDiffToNow(oldMSTime));
 }
 
 void LoadLootTables()

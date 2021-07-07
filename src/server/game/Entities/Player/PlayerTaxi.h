@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -22,6 +22,7 @@
 #include "Define.h"
 #include <deque>
 #include <iosfwd>
+#include <string>
 
 class ByteBuffer;
 struct FactionTemplateEntry;
@@ -33,7 +34,7 @@ class TC_GAME_API PlayerTaxi
         ~PlayerTaxi() { }
         // Nodes
         void InitTaxiNodesForLevel(uint32 race, uint32 chrClass, uint8 level);
-        void LoadTaxiMask(std::string const& data);
+        bool LoadTaxiMask(std::string const& data);
 
         bool IsTaximaskNodeKnown(uint32 nodeidx) const
         {
@@ -56,7 +57,7 @@ class TC_GAME_API PlayerTaxi
         void AppendTaximaskTo(ByteBuffer& data, bool all);
 
         // Destinations
-        bool LoadTaxiDestinationsFromString(std::string const& values, uint32 team);
+        [[nodiscard]] bool LoadTaxiDestinationsFromString(std::string const& values, uint32 team);
         std::string SaveTaxiDestinationsToString();
 
         void ClearTaxiDestinations() { m_TaxiDestinations.clear(); }

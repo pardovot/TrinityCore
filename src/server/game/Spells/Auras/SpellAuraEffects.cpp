@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -108,7 +107,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleAuraTrackResources,                        // 45 SPELL_AURA_TRACK_RESOURCES
     &AuraEffect::HandleNULL,                                      // 46 SPELL_AURA_46 (used in test spells 54054 and 54058, and spell 48050) (3.0.8a)
     &AuraEffect::HandleAuraModParryPercent,                       // 47 SPELL_AURA_MOD_PARRY_PERCENT
-    &AuraEffect::HandleNULL,                                      // 48 SPELL_AURA_48 spell Napalm (area damage spell with additional delayed damage effect)
+    &AuraEffect::HandleNoImmediateEffect,                         // 48 SPELL_AURA_PERIODIC_TRIGGER_SPELL_FROM_CLIENT
     &AuraEffect::HandleAuraModDodgePercent,                       // 49 SPELL_AURA_MOD_DODGE_PERCENT
     &AuraEffect::HandleNoImmediateEffect,                         // 50 SPELL_AURA_MOD_CRITICAL_HEALING_AMOUNT implemented in Unit::SpellCriticalHealingBonus
     &AuraEffect::HandleAuraModBlockPercent,                       // 51 SPELL_AURA_MOD_BLOCK_PERCENT
@@ -440,13 +439,13 @@ int32 AuraEffect::CalculateAmount(Unit* caster)
                         {
                             for (uint8 k = 0; k < MAX_ITEM_ENCHANTMENT_EFFECTS; ++k)
                             {
-                                if (SpellItemEnchantmentEntry const* pEnchant = sSpellItemEnchantmentStore.LookupEntry(item_rand_suffix->enchant_id[k]))
+                                if (SpellItemEnchantmentEntry const* pEnchant = sSpellItemEnchantmentStore.LookupEntry(item_rand_suffix->Enchantment[k]))
                                 {
                                     for (uint8 t = 0; t < MAX_ITEM_ENCHANTMENT_EFFECTS; ++t)
                                     {
-                                        if (pEnchant->spellid[t] == m_spellInfo->Id)
+                                        if (pEnchant->EffectArg[t] == m_spellInfo->Id)
                                         {
-                                            amount = uint32((item_rand_suffix->prefix[k] * castItem->GetItemSuffixFactor()) / 10000);
+                                            amount = uint32((item_rand_suffix->AllocationPct[k] * castItem->GetItemSuffixFactor()) / 10000);
                                             break;
                                         }
                                     }
@@ -572,6 +571,7 @@ void AuraEffect::CalculatePeriodic(Unit* caster, bool resetPeriodicTimer /*= tru
         case SPELL_AURA_PERIODIC_HEAL:
         case SPELL_AURA_OBS_MOD_HEALTH:
         case SPELL_AURA_PERIODIC_TRIGGER_SPELL:
+        case SPELL_AURA_PERIODIC_TRIGGER_SPELL_FROM_CLIENT:
         case SPELL_AURA_PERIODIC_ENERGIZE:
         case SPELL_AURA_PERIODIC_LEECH:
         case SPELL_AURA_PERIODIC_HEALTH_FUNNEL:
@@ -802,6 +802,7 @@ void AuraEffect::ApplySpellMod(Unit* target, bool apply)
                     }
                 }
             }
+            break;
         }
         default:
             break;
@@ -867,6 +868,16 @@ void AuraEffect::PeriodicTick(AuraApplication* aurApp, Unit* caster) const
 
     Unit* target = aurApp->GetTarget();
 
+    // Update serverside orientation of tracking channeled auras on periodic update ticks
+    // exclude players because can turn during channeling and shouldn't desync orientation client/server
+    if (caster && !caster->IsPlayer() && m_spellInfo->IsChanneled() && m_spellInfo->HasAttribute(SPELL_ATTR1_CHANNEL_TRACK_TARGET))
+    {
+        ObjectGuid const channelGuid = caster->GetChannelObjectGuid();
+        if (!channelGuid.IsEmpty() && channelGuid != caster->GetGUID())
+            if (WorldObject const* objectTarget = ObjectAccessor::GetWorldObject(*caster, channelGuid))
+                caster->SetInFront(objectTarget);
+    }
+
     switch (GetAuraType())
     {
         case SPELL_AURA_PERIODIC_DUMMY:
@@ -874,6 +885,9 @@ void AuraEffect::PeriodicTick(AuraApplication* aurApp, Unit* caster) const
             break;
         case SPELL_AURA_PERIODIC_TRIGGER_SPELL:
             HandlePeriodicTriggerSpellAuraTick(target, caster);
+            break;
+        case SPELL_AURA_PERIODIC_TRIGGER_SPELL_FROM_CLIENT:
+            // Don't actually do anything - client will trigger casts of these spells by itself
             break;
         case SPELL_AURA_PERIODIC_TRIGGER_SPELL_WITH_VALUE:
             HandlePeriodicTriggerSpellWithValueAuraTick(target, caster);
@@ -1144,7 +1158,7 @@ void AuraEffect::HandleShapeshiftBoosts(Unit* target, bool apply) const
             PlayerSpellMap const& sp_list = target->ToPlayer()->GetSpellMap();
             for (auto itr = sp_list.begin(); itr != sp_list.end(); ++itr)
             {
-                if (itr->second->state == PLAYERSPELL_REMOVED || itr->second->disabled)
+                if (itr->second.state == PLAYERSPELL_REMOVED || itr->second.disabled)
                     continue;
 
                 if (itr->first == spellId || itr->first == spellId2)
@@ -1165,12 +1179,12 @@ void AuraEffect::HandleShapeshiftBoosts(Unit* target, bool apply) const
                 {
                     if (GlyphPropertiesEntry const* glyph = sGlyphPropertiesStore.LookupEntry(glyphId))
                     {
-                        SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(glyph->SpellId);
+                        SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(glyph->SpellID);
                         if (!spellInfo || !(spellInfo->HasAttribute(SPELL_ATTR0_PASSIVE) || spellInfo->HasAttribute(SPELL_ATTR0_HIDDEN_CLIENTSIDE)))
                             continue;
 
                         if (spellInfo->Stances & (UI64LIT(1) << (GetMiscValue() - 1)))
-                            target->CastSpell(target, glyph->SpellId, this);
+                            target->CastSpell(target, glyph->SpellID, this);
                     }
                 }
             }
@@ -1212,21 +1226,6 @@ void AuraEffect::HandleShapeshiftBoosts(Unit* target, bool apply) const
                     // Savage Roar
                     if (target->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_DRUID, 0, 0x10000000, 0))
                         target->CastSpell(target, 62071, true);
-                    // Nurturing Instinct
-                    if (AuraEffect const* aurEff = target->GetAuraEffect(SPELL_AURA_MOD_SPELL_HEALING_OF_STAT_PERCENT, SPELLFAMILY_DRUID, 2254, 0))
-                    {
-                        uint32 spellId3 = 0;
-                        switch (aurEff->GetId())
-                        {
-                            case 33872:
-                                spellId3 = 47179;
-                                break;
-                            case 33873:
-                                spellId3 = 47180;
-                                break;
-                        }
-                        target->CastSpell(target, spellId3, this);
-                    }
                     // Master Shapeshifter - Cat
                     if (AuraEffect const* aurEff = target->GetDummyAuraEffect(SPELLFAMILY_GENERIC, 2851, 0))
                     {
@@ -1346,8 +1345,9 @@ void AuraEffect::HandleModInvisibilityDetect(AuraApplication const* aurApp, uint
         target->m_invisibilityDetect.AddValue(type, -GetAmount());
     }
 
-    // call functions which may have additional effects after chainging state of unit
-    target->UpdateObjectVisibility();
+    // call functions which may have additional effects after changing state of unit
+    if (target->IsInWorld())
+        target->UpdateObjectVisibility();
 }
 
 void AuraEffect::HandleModInvisibility(AuraApplication const* aurApp, uint8 mode, bool apply) const
@@ -1397,13 +1397,15 @@ void AuraEffect::HandleModInvisibility(AuraApplication const* aurApp, uint8 mode
         target->m_invisibility.AddValue(type, -GetAmount());
     }
 
-    // call functions which may have additional effects after chainging state of unit
+    // call functions which may have additional effects after changing state of unit
     if (apply && (mode & AURA_EFFECT_HANDLE_REAL))
     {
         // drop flag at invisibiliy in bg
         target->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_IMMUNE_OR_LOST_SELECTION);
     }
-    target->UpdateObjectVisibility();
+
+    if (target->IsInWorld())
+        target->UpdateObjectVisibility();
 }
 
 void AuraEffect::HandleModStealthDetect(AuraApplication const* aurApp, uint8 mode, bool apply) const
@@ -1427,8 +1429,9 @@ void AuraEffect::HandleModStealthDetect(AuraApplication const* aurApp, uint8 mod
         target->m_stealthDetect.AddValue(type, -GetAmount());
     }
 
-    // call functions which may have additional effects after chainging state of unit
-    target->UpdateObjectVisibility();
+    // call functions which may have additional effects after changing state of unit
+    if (target->IsInWorld())
+        target->UpdateObjectVisibility();
 }
 
 void AuraEffect::HandleModStealth(AuraApplication const* aurApp, uint8 mode, bool apply) const
@@ -1462,13 +1465,15 @@ void AuraEffect::HandleModStealth(AuraApplication const* aurApp, uint8 mode, boo
         }
     }
 
-    // call functions which may have additional effects after chainging state of unit
+    // call functions which may have additional effects after changing state of unit
     if (apply && (mode & AURA_EFFECT_HANDLE_REAL))
     {
         // drop flag at stealth in bg
         target->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_IMMUNE_OR_LOST_SELECTION);
     }
-    target->UpdateObjectVisibility();
+
+    if (target->IsInWorld())
+        target->UpdateObjectVisibility();
 }
 
 void AuraEffect::HandleModStealthLevel(AuraApplication const* aurApp, uint8 mode, bool apply) const
@@ -1484,8 +1489,9 @@ void AuraEffect::HandleModStealthLevel(AuraApplication const* aurApp, uint8 mode
     else
         target->m_stealth.AddValue(type, -GetAmount());
 
-    // call functions which may have additional effects after chainging state of unit
-    target->UpdateObjectVisibility();
+    // call functions which may have additional effects after changing state of unit
+    if (target->IsInWorld())
+        target->UpdateObjectVisibility();
 }
 
 void AuraEffect::HandleDetectAmore(AuraApplication const* aurApp, uint8 mode, bool apply) const
@@ -1540,7 +1546,7 @@ void AuraEffect::HandleSpiritOfRedemption(AuraApplication const* aurApp, uint8 m
     }
     // die at aura end
     else if (target->IsAlive())
-        // call functions which may have additional effects after chainging state of unit
+        // call functions which may have additional effects after changing state of unit
         target->setDeathState(JUST_DIED);
 }
 
@@ -1609,7 +1615,7 @@ void AuraEffect::HandlePhase(AuraApplication const* aurApp, uint8 mode, bool app
         target->SetPhaseMask(newPhase, false);
     }
 
-    // call functions which may have additional effects after chainging state of unit
+    // call functions which may have additional effects after changing state of unit
     // phase auras normally not expected at BG but anyway better check
     if (apply)
     {
@@ -1830,7 +1836,7 @@ void AuraEffect::HandleAuraModShapeshift(AuraApplication const* aurApp, uint8 mo
                     PlayerSpellMap const& sp_list = target->ToPlayer()->GetSpellMap();
                     for (PlayerSpellMap::const_iterator itr = sp_list.begin(); itr != sp_list.end(); ++itr)
                     {
-                        if (itr->second->state == PLAYERSPELL_REMOVED || itr->second->disabled)
+                        if (itr->second.state == PLAYERSPELL_REMOVED || itr->second.disabled)
                             continue;
 
                         SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(itr->first);
@@ -1877,17 +1883,17 @@ void AuraEffect::HandleAuraModShapeshift(AuraApplication const* aurApp, uint8 mo
 
     if (target->GetTypeId() == TYPEID_PLAYER)
     {
-        SpellShapeshiftEntry const* shapeInfo = sSpellShapeshiftStore.LookupEntry(form);
+        SpellShapeshiftFormEntry const* shapeInfo = sSpellShapeshiftFormStore.LookupEntry(form);
         ASSERT(shapeInfo);
         // Learn spells for shapeshift form - no need to send action bars or add spells to spellbook
         for (uint8 i = 0; i<MAX_SHAPESHIFT_SPELLS; ++i)
         {
-            if (!shapeInfo->stanceSpell[i])
+            if (!shapeInfo->PresetSpellID[i])
                 continue;
             if (apply)
-                target->ToPlayer()->AddTemporarySpell(shapeInfo->stanceSpell[i]);
+                target->ToPlayer()->AddTemporarySpell(shapeInfo->PresetSpellID[i]);
             else
-                target->ToPlayer()->RemoveTemporarySpell(shapeInfo->stanceSpell[i]);
+                target->ToPlayer()->RemoveTemporarySpell(shapeInfo->PresetSpellID[i]);
         }
     }
 }
@@ -2115,16 +2121,12 @@ void AuraEffect::HandleAuraTransform(AuraApplication const* aurApp, uint8 mode, 
     }
 }
 
-void AuraEffect::HandleAuraModScale(AuraApplication const* aurApp, uint8 mode, bool apply) const
+void AuraEffect::HandleAuraModScale(AuraApplication const* aurApp, uint8 mode, bool /*apply*/) const
 {
     if (!(mode & AURA_EFFECT_HANDLE_CHANGE_AMOUNT_SEND_FOR_CLIENT_MASK))
         return;
 
-    Unit* target = aurApp->GetTarget();
-
-    float scale = target->GetObjectScale();
-    scale += CalculatePct(1.0f, apply ? GetAmount() : -GetAmount());
-    target->SetObjectScale(scale);
+    aurApp->GetTarget()->RecalculateObjectScale();
 }
 
 void AuraEffect::HandleAuraCloneCaster(AuraApplication const* aurApp, uint8 mode, bool apply) const
@@ -2191,6 +2193,9 @@ void AuraEffect::HandleFeignDeath(AuraApplication const* aurApp, uint8 mode, boo
             }
         }
 
+        for (auto& pair : target->GetThreatManager().GetThreatenedByMeList())
+          pair.second->ScaleThreat(0.0f);
+
         if (target->GetMap()->IsDungeon()) // feign death does not remove combat in dungeons
         {
             target->AttackStop();
@@ -2211,7 +2216,7 @@ void AuraEffect::HandleFeignDeath(AuraApplication const* aurApp, uint8 mode, boo
         if (aurApp->GetRemoveMode())
             return;
 
-        target->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_UNK_29);            // blizz like 2.0.x
+        target->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PREVENT_EMOTES_FROM_CHAT_TEXT);            // blizz like 2.0.x
         target->SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_FEIGN_DEATH);    // blizz like 2.0.x
         target->SetFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_DEAD);         // blizz like 2.0.x
         target->AddUnitState(UNIT_STATE_DIED);
@@ -2228,7 +2233,7 @@ void AuraEffect::HandleFeignDeath(AuraApplication const* aurApp, uint8 mode, boo
         target->SendMessageToSet(&data, true);
         */
 
-        target->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_UNK_29);         // blizz like 2.0.x
+        target->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PREVENT_EMOTES_FROM_CHAT_TEXT);         // blizz like 2.0.x
         target->RemoveFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_FEIGN_DEATH); // blizz like 2.0.x
         target->RemoveFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_DEAD);      // blizz like 2.0.x
         target->ClearUnitState(UNIT_STATE_DIED);
@@ -2251,7 +2256,7 @@ void AuraEffect::HandleModUnattackable(AuraApplication const* aurApp, uint8 mode
 
     target->ApplyModFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE_2, apply);
 
-    // call functions which may have additional effects after chainging state of unit
+    // call functions which may have additional effects after changing state of unit
     if (apply && (mode & AURA_EFFECT_HANDLE_REAL))
     {
         if (target->GetMap()->IsDungeon())
@@ -2343,7 +2348,7 @@ void AuraEffect::HandleAuraModSilence(AuraApplication const* aurApp, uint8 mode,
     {
         target->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SILENCED);
 
-        // call functions which may have additional effects after chainging state of unit
+        // call functions which may have additional effects after changing state of unit
         // Stop cast only spells vs PreventionType == SPELL_PREVENTION_TYPE_SILENCE
         for (uint32 i = CURRENT_MELEE_SPELL; i < CURRENT_MAX_SPELL; ++i)
             if (Spell* spell = target->GetCurrentSpell(CurrentSpellTypes(i)))
@@ -2369,10 +2374,7 @@ void AuraEffect::HandleAuraModPacify(AuraApplication const* aurApp, uint8 mode, 
     Unit* target = aurApp->GetTarget();
 
     if (apply)
-    {
         target->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PACIFIED);
-        target->AttackStop();
-    }
     else
     {
         // do not remove unit flag if there are more than this auraEffect of that kind on unit on unit
@@ -2501,8 +2503,9 @@ void AuraEffect::HandleAuraModStalked(AuraApplication const* aurApp, uint8 mode,
             target->RemoveFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_TRACK_UNIT);
     }
 
-    // call functions which may have additional effects after chainging state of unit
-    target->UpdateObjectVisibility();
+    // call functions which may have additional effects after changing state of unit
+    if (target->IsInWorld())
+        target->UpdateObjectVisibility();
 }
 
 void AuraEffect::HandleAuraUntrackable(AuraApplication const* aurApp, uint8 mode, bool apply) const
@@ -2628,7 +2631,7 @@ void AuraEffect::HandleAuraAllowFlight(AuraApplication const* aurApp, uint8 mode
 
     if (target->SetCanFly(apply))
     {
-        if (!apply && !target->IsLevitating())
+        if (!apply && !target->IsGravityDisabled())
             target->GetMotionMaster()->MoveFall();
     }
 }
@@ -2972,7 +2975,10 @@ void AuraEffect::HandleAuraControlVehicle(AuraApplication const* aurApp, uint8 m
                 caster->ToCreature()->DespawnOrUnsummon();
         }
 
-        if (!(mode & AURA_EFFECT_HANDLE_CHANGE_AMOUNT))
+        bool seatChange = (mode & AURA_EFFECT_HANDLE_CHANGE_AMOUNT)                             // Seat change on the same direct vehicle
+            || target->HasAuraTypeWithCaster(SPELL_AURA_CONTROL_VEHICLE, caster->GetGUID());    // Seat change to a proxy vehicle (for example turret mounted on a siege engine)
+
+        if (!seatChange)
             caster->_ExitVehicle();
         else
             target->GetVehicleKit()->RemovePassenger(caster);  // Only remove passenger from vehicle without launching exit movement or despawning the vehicle
@@ -3016,7 +3022,7 @@ void AuraEffect::HandleAuraModIncreaseFlightSpeed(AuraApplication const* aurApp,
         if (mode & AURA_EFFECT_HANDLE_SEND_FOR_CLIENT_MASK && (apply || (!target->HasAuraType(SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED) && !target->HasAuraType(SPELL_AURA_FLY))))
         {
             if (target->SetCanFly(apply))
-                if (!apply && !target->IsLevitating())
+                if (!apply && !target->IsGravityDisabled())
                     target->GetMotionMaster()->MoveFall();
         }
 
@@ -3170,7 +3176,7 @@ void AuraEffect::HandleAuraModSchoolImmunity(AuraApplication const* aurApp, uint
     else
     {
         // do not remove unit flag if there are more than this auraEffect of that kind on unit
-        if (target->HasAuraType(GetAuraType()))
+        if (target->HasAuraType(GetAuraType()) || target->HasAuraType(SPELL_AURA_DAMAGE_IMMUNITY))
             return;
         target->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE);
     }
@@ -3185,7 +3191,17 @@ void AuraEffect::HandleAuraModDmgImmunity(AuraApplication const* aurApp, uint8 m
     m_spellInfo->ApplyAllSpellImmunitiesTo(target, GetEffIndex(), apply);
 
     if (apply)
+    {
+        target->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE);
         target->GetThreatManager().EvaluateSuppressed();
+    }
+    else
+    {
+        // do not remove unit flag if there are more than this auraEffect of that kind on unit
+        if (target->HasAuraType(GetAuraType()) || target->HasAuraType(SPELL_AURA_SCHOOL_IMMUNITY))
+            return;
+        target->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE);
+    }
 }
 
 void AuraEffect::HandleAuraModDispelImmunity(AuraApplication const* aurApp, uint8 mode, bool apply) const
@@ -3907,7 +3923,7 @@ void AuraEffect::HandleModCastingSpeed(AuraApplication const* aurApp, uint8 mode
 
     if (spellGroupVal)
         target->ApplyCastTimePercentMod(float(spellGroupVal), !apply);
-    
+
     target->ApplyCastTimePercentMod((float)GetAmount(), apply);
 }
 
@@ -4944,8 +4960,9 @@ void AuraEffect::HandleAuraModFakeInebriation(AuraApplication const* aurApp, uin
             target->m_invisibilityDetect.DelFlag(INVISIBILITY_DRUNK);
     }
 
-    // call functions which may have additional effects after chainging state of unit
-    target->UpdateObjectVisibility();
+    // call functions which may have additional effects after changing state of unit
+    if (target->IsInWorld())
+        target->UpdateObjectVisibility();
 }
 
 void AuraEffect::HandleAuraOverrideSpells(AuraApplication const* aurApp, uint8 mode, bool apply) const
@@ -4965,7 +4982,7 @@ void AuraEffect::HandleAuraOverrideSpells(AuraApplication const* aurApp, uint8 m
         target->SetUInt16Value(PLAYER_FIELD_BYTES2, PLAYER_BYTES_2_OVERRIDE_SPELLS_UINT16_OFFSET, overrideId);
         if (OverrideSpellDataEntry const* overrideSpells = sOverrideSpellDataStore.LookupEntry(overrideId))
             for (uint8 i = 0; i < MAX_OVERRIDE_SPELL; ++i)
-                if (uint32 spellId = overrideSpells->spellId[i])
+                if (uint32 spellId = overrideSpells->Spells[i])
                     target->AddTemporarySpell(spellId);
     }
     else
@@ -4973,7 +4990,7 @@ void AuraEffect::HandleAuraOverrideSpells(AuraApplication const* aurApp, uint8 m
         target->SetUInt16Value(PLAYER_FIELD_BYTES2, PLAYER_BYTES_2_OVERRIDE_SPELLS_UINT16_OFFSET, 0);
         if (OverrideSpellDataEntry const* overrideSpells = sOverrideSpellDataStore.LookupEntry(overrideId))
             for (uint8 i = 0; i < MAX_OVERRIDE_SPELL; ++i)
-                if (uint32 spellId = overrideSpells->spellId[i])
+                if (uint32 spellId = overrideSpells->Spells[i])
                     target->RemoveTemporarySpell(spellId);
     }
 }
@@ -5017,7 +5034,7 @@ void AuraEffect::HandlePreventResurrection(AuraApplication const* aurApp, uint8 
 
     if (apply)
         aurApp->GetTarget()->RemoveByteFlag(PLAYER_FIELD_BYTES, PLAYER_FIELD_BYTES_OFFSET_FLAGS, PLAYER_FIELD_BYTE_RELEASE_TIMER);
-    else if (!aurApp->GetTarget()->GetBaseMap()->Instanceable())
+    else if (!aurApp->GetTarget()->GetMap()->Instanceable())
         aurApp->GetTarget()->SetByteFlag(PLAYER_FIELD_BYTES, PLAYER_FIELD_BYTES_OFFSET_FLAGS, PLAYER_FIELD_BYTE_RELEASE_TIMER);
 }
 
@@ -5725,7 +5742,6 @@ void AuraEffect::HandleRaidProcFromChargeAuraProc(AuraApplication* aurApp, ProcE
     TC_LOG_DEBUG("spells.aura.effect", "AuraEffect::HandleRaidProcFromChargeAuraProc: Triggering spell %u from aura %u proc", triggerSpellId, GetId());
     target->CastSpell(target, triggerSpellId, { this, GetCasterGUID() });
 }
-
 
 void AuraEffect::HandleRaidProcFromChargeWithValueAuraProc(AuraApplication* aurApp, ProcEventInfo& /*eventInfo*/)
 {

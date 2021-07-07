@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -544,6 +543,28 @@ bool MotionMaster::GetDestination(float &x, float &y, float &z)
     return true;
 }
 
+bool MotionMaster::StopOnDeath()
+{
+    if (MovementGenerator* movementGenerator = GetCurrentMovementGenerator())
+        if (movementGenerator->HasFlag(MOVEMENTGENERATOR_FLAG_PERSIST_ON_DEATH))
+            return false;
+
+    if (_owner->IsInWorld())
+    {
+        // Only clear MotionMaster for entities that exists in world
+        // Avoids crashes in the following conditions :
+        //  * Using 'call pet' on dead pets
+        //  * Using 'call stabled pet'
+        //  * Logging in with dead pets
+        Clear();
+        MoveIdle();
+    }
+
+    _owner->StopMoving();
+
+    return true;
+}
+
 void MotionMaster::MoveIdle()
 {
     Add(GetIdleMovementGenerator(), MOTION_SLOT_DEFAULT);
@@ -573,12 +594,12 @@ void MotionMaster::MoveTargetedHome()
     }
 }
 
-void MotionMaster::MoveRandom(float spawndist)
+void MotionMaster::MoveRandom(float wanderDistance)
 {
     if (_owner->GetTypeId() == TYPEID_UNIT)
     {
-        TC_LOG_DEBUG("movement.motionmaster", "MotionMaster::MoveRandom: '%s', started random movement (spawnDist: %f)", _owner->GetGUID().ToString().c_str(), spawndist);
-        Add(new RandomMovementGenerator<Creature>(spawndist), MOTION_SLOT_DEFAULT);
+        TC_LOG_DEBUG("movement.motionmaster", "MotionMaster::MoveRandom: '%s', started random movement (spawnDist: %f)", _owner->GetGUID().ToString().c_str(), wanderDistance);
+        Add(new RandomMovementGenerator<Creature>(wanderDistance), MOTION_SLOT_DEFAULT);
     }
 }
 
@@ -672,23 +693,27 @@ void MotionMaster::MoveCloserAndStop(uint32 id, Unit* target, float distance)
     }
 }
 
-void MotionMaster::MoveLand(uint32 id, Position const& pos)
+void MotionMaster::MoveLand(uint32 id, Position const& pos, Optional<float> velocity /*= {}*/)
 {
     TC_LOG_DEBUG("movement.motionmaster", "MotionMaster::MoveLand: '%s', landing point Id: %u (X: %f, Y: %f, Z: %f)", _owner->GetGUID().ToString().c_str(), id, pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ());
 
     Movement::MoveSplineInit init(_owner);
-    init.MoveTo(PositionToVector3(pos));
-    init.SetAnimation(Movement::ToGround);
+    init.MoveTo(PositionToVector3(pos), false);
+    init.SetAnimation(AnimationTier::Ground);
+    if (velocity)
+        init.SetVelocity(*velocity);
     Add(new GenericMovementGenerator(std::move(init), EFFECT_MOTION_TYPE, id));
 }
 
-void MotionMaster::MoveTakeoff(uint32 id, Position const& pos)
+void MotionMaster::MoveTakeoff(uint32 id, Position const& pos, Optional<float> velocity /*= {}*/)
 {
     TC_LOG_DEBUG("movement.motionmaster", "MotionMaster::MoveTakeoff: '%s', landing point Id: %u (X: %f, Y: %f, Z: %f)", _owner->GetGUID().ToString().c_str(), id, pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ());
 
     Movement::MoveSplineInit init(_owner);
-    init.MoveTo(PositionToVector3(pos));
-    init.SetAnimation(Movement::ToFly);
+    init.MoveTo(PositionToVector3(pos), false);
+    init.SetAnimation(AnimationTier::Hover);
+    if (velocity)
+        init.SetVelocity(*velocity);
     Add(new GenericMovementGenerator(std::move(init), EFFECT_MOTION_TYPE, id));
 }
 
@@ -738,21 +763,23 @@ void MotionMaster::MoveKnockbackFrom(float srcX, float srcY, float speedXY, floa
     if (speedXY < 0.01f)
         return;
 
-    float x, y, z;
+    Position dest = _owner->GetPosition();
     float moveTimeHalf = speedZ / Movement::gravity;
     float dist = 2 * moveTimeHalf * speedXY;
     float max_height = -Movement::computeFallElevation(moveTimeHalf, false, -speedZ);
 
-    _owner->GetNearPoint(_owner, x, y, z, dist, _owner->GetAbsoluteAngle(srcX, srcY) + float(M_PI));
+    // Use a mmap raycast to get a valid destination.
+    _owner->MovePositionToFirstCollision(dest, dist, _owner->GetRelativeAngle(srcX, srcY) + float(M_PI));
 
     Movement::MoveSplineInit init(_owner);
-    init.MoveTo(x, y, z);
+    init.MoveTo(dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ(), false);
     init.SetParabolic(max_height, 0);
     init.SetOrientationFixed(true);
     init.SetVelocity(speedXY);
 
     GenericMovementGenerator* movement = new GenericMovementGenerator(std::move(init), EFFECT_MOTION_TYPE, 0);
     movement->Priority = MOTION_PRIORITY_HIGHEST;
+    movement->AddFlag(MOVEMENTGENERATOR_FLAG_PERSIST_ON_DEATH);
     Add(movement);
 }
 
@@ -797,6 +824,7 @@ void MotionMaster::MoveJump(float x, float y, float z, float o, float speedXY, f
     GenericMovementGenerator* movement = new GenericMovementGenerator(std::move(init), EFFECT_MOTION_TYPE, id);
     movement->Priority = MOTION_PRIORITY_HIGHEST;
     movement->BaseUnitState = UNIT_STATE_JUMPING;
+    movement->AddFlag(MOVEMENTGENERATOR_FLAG_PERSIST_ON_DEATH);
     Add(movement);
 }
 
@@ -807,6 +835,9 @@ void MotionMaster::MoveCirclePath(float x, float y, float z, float radius, bool 
     float angle = pos.GetAbsoluteAngle(_owner->GetPositionX(), _owner->GetPositionY());
 
     Movement::MoveSplineInit init(_owner);
+
+    // add the owner's current position as starting point as it gets removed after entering the cycle
+    init.Path().push_back(G3D::Vector3(_owner->GetPositionX(), _owner->GetPositionY(), _owner->GetPositionZ()));
 
     for (uint8 i = 0; i < stepCount; angle += step, ++i)
     {
@@ -826,7 +857,7 @@ void MotionMaster::MoveCirclePath(float x, float y, float z, float radius, bool 
     {
         init.SetFly();
         init.SetCyclic();
-        init.SetAnimation(Movement::ToFly);
+        init.SetAnimation(AnimationTier::Hover);
     }
     else
     {
@@ -905,7 +936,7 @@ void MotionMaster::MoveFall(uint32 id/* = 0*/)
         return;
 
     // rooted units don't move (also setting falling+root flag causes client freezes)
-    if (_owner->HasUnitState(UNIT_STATE_ROOT))
+    if (_owner->HasUnitState(UNIT_STATE_ROOT | UNIT_STATE_STUNNED))
         return;
 
     _owner->AddUnitMovementFlag(MOVEMENTFLAG_FALLING);
@@ -929,12 +960,13 @@ void MotionMaster::MoveFall(uint32 id/* = 0*/)
 
 void MotionMaster::MoveSeekAssistance(float x, float y, float z)
 {
-    if (_owner->GetTypeId() == TYPEID_UNIT)
+    if (Creature* creature = _owner->ToCreature())
     {
-        TC_LOG_DEBUG("movement.motionmaster", "MotionMaster::MoveSeekAssistance: '%s', seeks assistance (X: %f, Y: %f, Z: %f)", _owner->GetGUID().ToString().c_str(), x, y, z);
-        _owner->AttackStop();
-        _owner->CastStop();
-        _owner->ToCreature()->SetReactState(REACT_PASSIVE);
+        TC_LOG_DEBUG("movement.motionmaster", "MotionMaster::MoveSeekAssistance: '%s', seeks assistance (X: %f, Y: %f, Z: %f)", creature->GetGUID().ToString().c_str(), x, y, z);
+        creature->AttackStop();
+        creature->CastStop();
+        creature->DoNotReacquireSpellFocusTarget();
+        creature->SetReactState(REACT_PASSIVE);
         Add(new AssistanceMovementGenerator(EVENT_ASSIST_MOVE, x, y, z));
     }
     else
@@ -1009,12 +1041,12 @@ void MotionMaster::MoveRotate(uint32 id, uint32 time, RotateDirection direction)
     Add(new RotateMovementGenerator(id, time, direction));
 }
 
-void MotionMaster::MoveFormation(uint32 id, Position destination, uint32 moveType, bool forceRun /*= false*/, bool forceOrientation /*= false*/)
+void MotionMaster::MoveFormation(Unit* leader, float range, float angle, uint32 point1, uint32 point2)
 {
-    if (_owner->GetTypeId() == TYPEID_UNIT)
+    if (_owner->GetTypeId() == TYPEID_UNIT && leader)
     {
-        TC_LOG_DEBUG("movement.motionmaster", "MotionMaster::MoveFormation: '%s', targeted point Id: %u (X: %f, Y: %f, Z: %f)", _owner->GetGUID().ToString().c_str(), id, destination.GetPositionX(), destination.GetPositionY(), destination.GetPositionZ());
-        Add(new FormationMovementGenerator(id, destination, moveType, forceRun, forceOrientation));
+        TC_LOG_DEBUG("movement.motionmaster", "MotionMaster::MoveFormation: '%s', started to move in a formation with leader %s", _owner->GetGUID().ToString().c_str(), leader->GetGUID().ToString().c_str());
+        Add(new FormationMovementGenerator(leader, range, angle, point1, point2), MOTION_SLOT_DEFAULT);
     }
 }
 
@@ -1053,7 +1085,8 @@ void MotionMaster::Remove(MotionMasterContainer::iterator iterator, bool active,
 
 void MotionMaster::Pop(bool active, bool movementInform)
 {
-    Remove(_generators.begin(), active, movementInform);
+    if (!_generators.empty())
+        Remove(_generators.begin(), active, movementInform);
 }
 
 void MotionMaster::DirectInitialize()

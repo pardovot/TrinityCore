@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -167,7 +167,7 @@ bool OutdoorPvPSI::HandleDropFlag(Player* player, uint32 spellId)
                 if (atEntry)
                 {
                     // 5.0f is safe-distance
-                    if (player->GetDistance(atEntry->x, atEntry->y, atEntry->z) > 5.0f + atEntry->radius)
+                    if (player->GetDistance(atEntry->Pos.X, atEntry->Pos.Y, atEntry->Pos.Z) > 5.0f + atEntry->Radius)
                     {
                         // he dropped it further, summon mound
                         GameObject* go = new GameObject;
@@ -196,7 +196,7 @@ bool OutdoorPvPSI::HandleDropFlag(Player* player, uint32 spellId)
                 if (atEntry)
                 {
                     // 5.0f is safe-distance
-                    if (player->GetDistance(atEntry->x, atEntry->y, atEntry->z) > 5.0f + atEntry->radius)
+                    if (player->GetDistance(atEntry->Pos.X, atEntry->Pos.Y, atEntry->Pos.Z) > 5.0f + atEntry->Radius)
                     {
                         // he dropped it further, summon mound
                         GameObject* go = new GameObject;

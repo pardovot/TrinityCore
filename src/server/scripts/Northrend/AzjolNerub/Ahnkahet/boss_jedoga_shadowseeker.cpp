@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -159,19 +159,19 @@ struct boss_jedoga_shadowseeker : public BossAI
         events.ScheduleEvent(EVENT_INTRO_SAY, Minutes(2), 0, PHASE_INTRO);
     }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
         me->RemoveAurasDueToSpell(SPELL_SPHERE_VISUAL);
         me->RemoveAurasDueToSpell(SPELL_RANDOM_LIGHTNING_VISUAL);
         me->SummonCreatureGroup(SUMMON_GROUP_WORSHIPPERS);
 
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
         Talk(SAY_AGGRO);
         events.SetPhase(PHASE_ONE);
 
         for (VolunteerPositionPair posPair : VolunteerSpotPositions)
         {
-            if (TempSummon* volunteer = me->SummonCreature(NPC_TWILIGHT_VOLUNTEER, posPair.first, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 3000))
+            if (TempSummon* volunteer = me->SummonCreature(NPC_TWILIGHT_VOLUNTEER, posPair.first, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 3s))
             {
                 volunteer->GetMotionMaster()->MovePoint(POINT_INITIAL_POSITION, posPair.second);
                 _volunteerGUIDS.push_back(volunteer->GetGUID());
@@ -246,7 +246,7 @@ struct boss_jedoga_shadowseeker : public BossAI
             if (++_initiatesKilled == TWILIGHT_INITIATES_SIZE)
             {
                 DoCastSelf(SPELL_HOVER_FALL_1);
-                me->RemoveByteFlag(UNIT_FIELD_BYTES_1, UNIT_BYTES_1_OFFSET_ANIM_TIER, UNIT_BYTE1_FLAG_ALWAYS_STAND | UNIT_BYTE1_FLAG_HOVER);
+                me->SetAnimationTier(AnimationTier::Ground);
                 events.ScheduleEvent(EVENT_START_FIGHT_1, Seconds(1));
             }
         }
@@ -318,7 +318,6 @@ struct boss_jedoga_shadowseeker : public BossAI
                 case EVENT_START_FIGHT_2:
                     summons.DespawnEntry(NPC_JEDOGA_CONTROLLER);
                     me->SetDisableGravity(false);
-                    me->RemoveByteFlag(UNIT_FIELD_BYTES_1, UNIT_BYTES_1_OFFSET_ANIM_TIER, UNIT_BYTE1_FLAG_ALWAYS_STAND | UNIT_BYTE1_FLAG_HOVER);
                     me->GetMotionMaster()->MoveLand(POINT_GROUND, JedogaGroundPosition);
                     break;
                 case EVENT_START_PHASE_TWO:
@@ -330,7 +329,6 @@ struct boss_jedoga_shadowseeker : public BossAI
                     break;
                 case EVENT_FLY_DELAY:
                     me->SetDisableGravity(true);
-                    me->SetByteFlag(UNIT_FIELD_BYTES_1, UNIT_BYTES_1_OFFSET_ANIM_TIER, UNIT_BYTE1_FLAG_ALWAYS_STAND | UNIT_BYTE1_FLAG_HOVER);
                     me->GetMotionMaster()->MoveTakeoff(POINT_PHASE_TWO_FLY, JedogaFlyPosition);
                     break;
                 case EVENT_CHOOSE_VOLUNTEER:
@@ -355,7 +353,7 @@ struct boss_jedoga_shadowseeker : public BossAI
                     if (pos < VolunteerSpotPositions.size())
                     {
                         VolunteerPositionPair posPair = VolunteerSpotPositions.at(pos);
-                        if (TempSummon* volunteer = me->SummonCreature(NPC_TWILIGHT_VOLUNTEER, posPair.first, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 3000))
+                        if (TempSummon* volunteer = me->SummonCreature(NPC_TWILIGHT_VOLUNTEER, posPair.first, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 3s))
                             volunteer->GetMotionMaster()->MovePoint(POINT_INITIAL_POSITION, posPair.second);
                     }
                     break;
@@ -364,7 +362,6 @@ struct boss_jedoga_shadowseeker : public BossAI
                     summons.DespawnEntry(NPC_JEDOGA_CONTROLLER);
                     DoCastSelf(SPELL_HOVER_FALL_2);
                     me->SetDisableGravity(false);
-                    me->RemoveByteFlag(UNIT_FIELD_BYTES_1, UNIT_BYTES_1_OFFSET_ANIM_TIER, UNIT_BYTE1_FLAG_ALWAYS_STAND | UNIT_BYTE1_FLAG_HOVER);
                     me->GetMotionMaster()->MoveLand(POINT_GROUND, JedogaGroundPosition);
                     break;
                 case EVENT_CYCLONE_STRIKE:
@@ -372,12 +369,12 @@ struct boss_jedoga_shadowseeker : public BossAI
                     events.Repeat(Seconds(15), Seconds(30));
                     break;
                 case EVENT_LIGHTNING_BOLT:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
+                    if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 100.0f, true))
                         DoCast(target, SPELL_LIGHTNING_BOLT);
                     events.Repeat(Seconds(15), Seconds(30));
                     break;
                 case EVENT_THUNDERSHOCK:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
+                    if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 100.0f, true))
                         DoCast(target, SPELL_THUNDERSHOCK);
                     events.Repeat(Seconds(15), Seconds(30));
                     break;

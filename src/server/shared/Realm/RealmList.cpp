@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -29,9 +28,7 @@ RealmList::RealmList() : _updateInterval(0)
 {
 }
 
-RealmList::~RealmList()
-{
-}
+RealmList::~RealmList() = default;
 
 RealmList* RealmList::Instance()
 {
@@ -43,9 +40,10 @@ RealmList* RealmList::Instance()
 void RealmList::Initialize(Trinity::Asio::IoContext& ioContext, uint32 updateInterval)
 {
     _updateInterval = updateInterval;
-    _updateTimer = Trinity::make_unique<Trinity::Asio::DeadlineTimer>(ioContext);
-    _resolver = Trinity::make_unique<boost::asio::ip::tcp::resolver>(ioContext);
+    _updateTimer = std::make_unique<Trinity::Asio::DeadlineTimer>(ioContext);
+    _resolver = std::make_unique<Trinity::Asio::Resolver>(ioContext);
 
+    LoadBuildInfo();
     // Get the content of the realmlist table in the database
     UpdateRealms(boost::system::error_code());
 }
@@ -53,6 +51,37 @@ void RealmList::Initialize(Trinity::Asio::IoContext& ioContext, uint32 updateInt
 void RealmList::Close()
 {
     _updateTimer->cancel();
+}
+
+void RealmList::LoadBuildInfo()
+{
+    //                                                              0             1              2              3      4                5                6
+    if (QueryResult result = LoginDatabase.Query("SELECT majorVersion, minorVersion, bugfixVersion, hotfixVersion, build, winChecksumSeed, macChecksumSeed FROM build_info ORDER BY build ASC"))
+    {
+        do
+        {
+            Field* fields = result->Fetch();
+            RealmBuildInfo& build = _builds.emplace_back();
+            build.MajorVersion = fields[0].GetUInt32();
+            build.MinorVersion = fields[1].GetUInt32();
+            build.BugfixVersion = fields[2].GetUInt32();
+            std::string hotfixVersion = fields[3].GetString();
+            if (hotfixVersion.length() < build.HotfixVersion.size())
+                std::copy(hotfixVersion.begin(), hotfixVersion.end(), build.HotfixVersion.begin());
+            else
+                std::fill(hotfixVersion.begin(), hotfixVersion.end(), '\0');
+
+            build.Build = fields[4].GetUInt32();
+            std::string windowsHash = fields[5].GetString();
+            if (windowsHash.length() == build.WindowsHash.size() * 2)
+                HexStrToByteArray(windowsHash, build.WindowsHash);
+
+            std::string macHash = fields[6].GetString();
+            if (macHash.length() == build.MacHash.size() * 2)
+                HexStrToByteArray(macHash, build.MacHash);
+
+        } while (result->NextRow());
+    }
 }
 
 void RealmList::UpdateRealm(RealmHandle const& id, uint32 build, std::string const& name,
@@ -71,11 +100,11 @@ void RealmList::UpdateRealm(RealmHandle const& id, uint32 build, std::string con
     realm.AllowedSecurityLevel = allowedSecurityLevel;
     realm.PopulationLevel = population;
     if (!realm.ExternalAddress || *realm.ExternalAddress != address)
-        realm.ExternalAddress = Trinity::make_unique<boost::asio::ip::address>(std::move(address));
+        realm.ExternalAddress = std::make_unique<boost::asio::ip::address>(std::move(address));
     if (!realm.LocalAddress || *realm.LocalAddress != localAddr)
-        realm.LocalAddress = Trinity::make_unique<boost::asio::ip::address>(std::move(localAddr));
+        realm.LocalAddress = std::make_unique<boost::asio::ip::address>(std::move(localAddr));
     if (!realm.LocalSubnetMask || *realm.LocalSubnetMask != localSubmask)
-        realm.LocalSubnetMask = Trinity::make_unique<boost::asio::ip::address>(std::move(localSubmask));
+        realm.LocalSubnetMask = std::make_unique<boost::asio::ip::address>(std::move(localSubmask));
     realm.Port = port;
 }
 
@@ -86,7 +115,7 @@ void RealmList::UpdateRealms(boost::system::error_code const& error)
 
     TC_LOG_DEBUG("server.authserver", "Updating Realm List...");
 
-    PreparedStatement* stmt = LoginDatabase.GetPreparedStatement(LOGIN_SEL_REALMLIST);
+    LoginDatabasePreparedStatement *stmt = LoginDatabase.GetPreparedStatement(LOGIN_SEL_REALMLIST);
     PreparedQueryResult result = LoginDatabase.Query(stmt);
 
     std::map<RealmHandle, std::string> existingRealms;
@@ -109,21 +138,21 @@ void RealmList::UpdateRealms(boost::system::error_code const& error)
                 std::string localAddressString = fields[3].GetString();
                 std::string localSubmaskString = fields[4].GetString();
 
-                Optional<boost::asio::ip::tcp::endpoint> externalAddress = Trinity::Net::Resolve(*_resolver, boost::asio::ip::tcp::v4(), externalAddressString, "");
+                Optional<boost::asio::ip::tcp::endpoint> externalAddress = _resolver->Resolve(boost::asio::ip::tcp::v4(), externalAddressString, "");
                 if (!externalAddress)
                 {
                     TC_LOG_ERROR("server.authserver", "Could not resolve address %s for realm \"%s\" id %u", externalAddressString.c_str(), name.c_str(), realmId);
                     continue;
                 }
 
-                Optional<boost::asio::ip::tcp::endpoint> localAddress = Trinity::Net::Resolve(*_resolver, boost::asio::ip::tcp::v4(), localAddressString, "");
+                Optional<boost::asio::ip::tcp::endpoint> localAddress = _resolver->Resolve(boost::asio::ip::tcp::v4(), localAddressString, "");
                 if (!localAddress)
                 {
                     TC_LOG_ERROR("server.authserver", "Could not resolve localAddress %s for realm \"%s\" id %u", localAddressString.c_str(), name.c_str(), realmId);
                     continue;
                 }
 
-                Optional<boost::asio::ip::tcp::endpoint> localSubmask = Trinity::Net::Resolve(*_resolver, boost::asio::ip::tcp::v4(), localSubmaskString, "");
+                Optional<boost::asio::ip::tcp::endpoint> localSubmask = _resolver->Resolve(boost::asio::ip::tcp::v4(), localSubmaskString, "");
                 if (!localSubmask)
                 {
                     TC_LOG_ERROR("server.authserver", "Could not resolve localSubnetMask %s for realm \"%s\" id %u", localSubmaskString.c_str(), name.c_str(), realmId);
@@ -178,6 +207,15 @@ Realm const* RealmList::GetRealm(RealmHandle const& id) const
     auto itr = _realms.find(id);
     if (itr != _realms.end())
         return &itr->second;
+
+    return nullptr;
+}
+
+RealmBuildInfo const* RealmList::GetBuildInfo(uint32 build) const
+{
+    for (RealmBuildInfo const& clientBuild : _builds)
+        if (clientBuild.Build == build)
+            return &clientBuild;
 
     return nullptr;
 }

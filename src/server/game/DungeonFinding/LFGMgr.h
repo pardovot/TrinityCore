@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -44,7 +44,7 @@ enum LfgOptions
 
 enum LFGMgrEnum
 {
-    LFG_TIME_ROLECHECK                           = 45 * IN_MILLISECONDS,
+    LFG_TIME_ROLECHECK                           = 45,
     LFG_TIME_BOOT                                = 120,
     LFG_TIME_PROPOSAL                            = 45,
     LFG_QUEUEUPDATE_INTERVAL                     = 15 * IN_MILLISECONDS,

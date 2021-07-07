@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -133,7 +132,7 @@ enum ScriptCommands
     SCRIPT_COMMAND_MODEL                 = 32,               // source = Creature, datalong = model id
     SCRIPT_COMMAND_CLOSE_GOSSIP          = 33,               // source = Player
     SCRIPT_COMMAND_PLAYMOVIE             = 34,               // source = Player, datalong = movie id
-    SCRIPT_COMMAND_MOVEMENT              = 35,               // source = Creature, datalong = MovementType, datalong2 = MovementDistance (spawndist f.ex.), dataint = pathid
+    SCRIPT_COMMAND_MOVEMENT              = 35,               // source = Creature, datalong = MovementType, datalong2 = MovementDistance (wander_distance f.ex.), dataint = pathid
     SCRIPT_COMMAND_PLAY_ANIMKIT          = 36                // source = Creature, datalong = AnimKit id (NOT ON 3.3.5A, DON'T REUSE)
 };
 
@@ -429,9 +428,11 @@ struct TC_GAME_API InstanceSpawnGroupInfo
     enum
     {
         FLAG_ACTIVATE_SPAWN = 0x01,
-        FLAG_BLOCK_SPAWN = 0x02,
+        FLAG_BLOCK_SPAWN    = 0x02,
+        FLAG_ALLIANCE_ONLY  = 0x04,
+        FLAG_HORDE_ONLY     = 0x08,
 
-        FLAG_ALL = (FLAG_ACTIVATE_SPAWN | FLAG_BLOCK_SPAWN)
+        FLAG_ALL = (FLAG_ACTIVATE_SPAWN | FLAG_BLOCK_SPAWN | FLAG_ALLIANCE_ONLY | FLAG_HORDE_ONLY)
     };
     uint8 BossStateId;
     uint8 BossStates;
@@ -475,41 +476,41 @@ struct AccessRequirement
 
 struct BroadcastText
 {
-    BroadcastText() : Id(0), Language(0), EmoteId0(0), EmoteId1(0), EmoteId2(0),
-                      EmoteDelay0(0), EmoteDelay1(0), EmoteDelay2(0), SoundId(0), Unk1(0), Unk2(0)
+    BroadcastText() : Id(0), LanguageID(0), EmoteId1(0), EmoteId2(0), EmoteId3(0),
+                      EmoteDelay1(0), EmoteDelay2(0), EmoteDelay3(0), SoundEntriesID(0), EmotesID(0), Flags(0)
     {
-        MaleText.resize(DEFAULT_LOCALE + 1);
-        FemaleText.resize(DEFAULT_LOCALE + 1);
+        Text.resize(DEFAULT_LOCALE + 1);
+        Text1.resize(DEFAULT_LOCALE + 1);
     }
 
     uint32 Id;
-    uint32 Language;
-    std::vector<std::string> MaleText;
-    std::vector<std::string> FemaleText;
-    uint32 EmoteId0;
+    uint32 LanguageID;
+    std::vector<std::string> Text;
+    std::vector<std::string> Text1;
     uint32 EmoteId1;
     uint32 EmoteId2;
-    uint32 EmoteDelay0;
+    uint32 EmoteId3;
     uint32 EmoteDelay1;
     uint32 EmoteDelay2;
-    uint32 SoundId;
-    uint32 Unk1;
-    uint32 Unk2;
+    uint32 EmoteDelay3;
+    uint32 SoundEntriesID;
+    uint32 EmotesID;
+    uint32 Flags;
     // uint32 VerifiedBuild;
 
     std::string const& GetText(LocaleConstant locale = DEFAULT_LOCALE, uint8 gender = GENDER_MALE, bool forceGender = false) const
     {
-        if ((gender == GENDER_FEMALE || gender == GENDER_NONE) && (forceGender || !FemaleText[DEFAULT_LOCALE].empty()))
+        if ((gender == GENDER_FEMALE || gender == GENDER_NONE) && (forceGender || !Text1[DEFAULT_LOCALE].empty()))
         {
-            if (FemaleText.size() > size_t(locale) && !FemaleText[locale].empty())
-                return FemaleText[locale];
-            return FemaleText[DEFAULT_LOCALE];
+            if (Text1.size() > size_t(locale) && !Text1[locale].empty())
+                return Text1[locale];
+            return Text1[DEFAULT_LOCALE];
         }
         // else if (gender == GENDER_MALE)
         {
-            if (MaleText.size() > size_t(locale) && !MaleText[locale].empty())
-                return MaleText[locale];
-            return MaleText[DEFAULT_LOCALE];
+            if (Text.size() > size_t(locale) && !Text[locale].empty())
+                return Text[locale];
+            return Text[DEFAULT_LOCALE];
         }
     }
 };
@@ -552,7 +553,7 @@ typedef std::unordered_map<ObjectGuid::LowType, GameObjectData> GameObjectDataCo
 typedef std::unordered_map<ObjectGuid::LowType, GameObjectAddon> GameObjectAddonContainer;
 typedef std::unordered_map<uint32, std::vector<uint32>> GameObjectQuestItemMap;
 typedef std::unordered_map<uint32, SpawnGroupTemplateData> SpawnGroupDataContainer;
-typedef std::multimap<uint32, SpawnData const*> SpawnGroupLinkContainer;
+typedef std::multimap<uint32, SpawnMetadata const*> SpawnGroupLinkContainer;
 typedef std::unordered_map<uint16, std::vector<InstanceSpawnGroupInfo>> InstanceSpawnGroupContainer;
 typedef std::map<TempSummonGroupKey, std::vector<TempSummonData>> TempSummonDataContainer;
 typedef std::unordered_map<uint32, CreatureLocale> CreatureLocaleContainer;
@@ -565,6 +566,7 @@ typedef std::unordered_map<uint32, QuestOfferRewardLocale> QuestOfferRewardLocal
 typedef std::unordered_map<uint32, QuestRequestItemsLocale> QuestRequestItemsLocaleContainer;
 typedef std::unordered_map<uint32, NpcTextLocale> NpcTextLocaleContainer;
 typedef std::unordered_map<uint32, PageTextLocale> PageTextLocaleContainer;
+typedef std::unordered_map<uint32, VehicleSeatAddon> VehicleSeatAddonContainer;
 
 struct GossipMenuItemsLocale
 {
@@ -703,24 +705,17 @@ struct PlayerInfo
     std::unique_ptr<PlayerLevelInfo[]> levelInfo;
 };
 
-
 typedef std::multimap<int32, uint32> ExclusiveQuestGroups; // exclusiveGroupId -> quest
 typedef std::pair<ExclusiveQuestGroups::const_iterator, ExclusiveQuestGroups::const_iterator> ExclusiveQuestGroupsBounds;
 
 struct PetLevelInfo
 {
-    PetLevelInfo() : health(0), mana(0), armor(0), minDamage(0), maxDamage(0)
-    {
-        for (uint16& stat : stats)
-            stat = 0;
-    }
-
-    uint16 stats[MAX_STATS];
-    uint16 health;
-    uint16 mana;
-    uint32 armor;
-    uint16 minDamage;
-    uint16 maxDamage;
+    uint16 stats[MAX_STATS] = {};
+    uint16 health = 0;
+    uint16 mana = 0;
+    uint32 armor = 0;
+    uint16 minDamage = 0;
+    uint16 maxDamage = 0;
 };
 
 struct MailLevelReward
@@ -940,6 +935,7 @@ class PlayerDumpReader;
 class TC_GAME_API ObjectMgr
 {
     friend class PlayerDumpReader;
+    friend class UnitTestDataLoader;
 
     private:
         ObjectMgr();
@@ -958,7 +954,7 @@ class TC_GAME_API ObjectMgr
 
         typedef std::unordered_map<uint32, AreaTrigger> AreaTriggerContainer;
 
-        typedef std::unordered_map<uint32, uint32> AreaTriggerScriptContainer;
+        typedef std::map<uint32, uint32> AreaTriggerScriptContainer;
 
         typedef std::unordered_map<uint32, std::unique_ptr<AccessRequirement>> AccessRequirementContainer;
 
@@ -1119,6 +1115,7 @@ class TC_GAME_API ObjectMgr
 
         QuestPOIWrapper const* GetQuestPOIWrapper(uint32 questId) const;
 
+        VehicleTemplate const* GetVehicleTemplate(Vehicle* veh) const;
         VehicleAccessoryList const* GetVehicleAccessoryList(Vehicle* veh) const;
 
         DungeonEncounterList const* GetDungeonEncounterList(uint32 mapId, Difficulty difficulty) const;
@@ -1195,7 +1192,9 @@ class TC_GAME_API ObjectMgr
         void LoadInstanceEncounters();
         void LoadMailLevelRewards();
         void LoadVehicleTemplateAccessories();
+        void LoadVehicleTemplate();
         void LoadVehicleAccessories();
+        void LoadVehicleSeatAddon();
 
         void LoadGossipText();
 
@@ -1268,9 +1267,10 @@ class TC_GAME_API ObjectMgr
         ObjectGuid::LowType GenerateGameObjectSpawnId();
 
         SpawnGroupTemplateData const* GetSpawnGroupData(uint32 groupId) const { auto it = _spawnGroupDataStore.find(groupId); return it != _spawnGroupDataStore.end() ? &it->second : nullptr; }
+        SpawnGroupTemplateData const* GetSpawnGroupData(SpawnObjectType type, ObjectGuid::LowType spawnId) const { SpawnMetadata const* data = GetSpawnMetadata(type, spawnId); return data ? data->spawnGroupData : nullptr; }
         SpawnGroupTemplateData const* GetDefaultSpawnGroup() const { return &_spawnGroupDataStore.at(0); }
         SpawnGroupTemplateData const* GetLegacySpawnGroup() const { return &_spawnGroupDataStore.at(1); }
-        Trinity::IteratorPair<SpawnGroupLinkContainer::const_iterator> GetSpawnDataForGroup(uint32 groupId) const { return Trinity::Containers::MapEqualRange(_spawnGroupMapStore, groupId); }
+        Trinity::IteratorPair<SpawnGroupLinkContainer::const_iterator> GetSpawnMetadataForGroup(uint32 groupId) const { return Trinity::Containers::MapEqualRange(_spawnGroupMapStore, groupId); }
         std::vector<InstanceSpawnGroupInfo> const* GetSpawnGroupsForInstance(uint32 instanceId) const { auto it = _instanceSpawnGroupStore.find(instanceId); return it != _instanceSpawnGroupStore.end() ? &it->second : nullptr; }
 
         MailLevelReward const* GetMailLevelReward(uint32 level, uint32 raceMask) const
@@ -1322,29 +1322,42 @@ class TC_GAME_API ObjectMgr
             return nullptr;
         }
 
-        SpawnData const* GetSpawnData(SpawnObjectType type, ObjectGuid::LowType guid)
+        SpawnMetadata const* GetSpawnMetadata(SpawnObjectType type, ObjectGuid::LowType spawnId) const
         {
-            if (type == SPAWN_TYPE_CREATURE)
-                return GetCreatureData(guid);
-            else if (type == SPAWN_TYPE_GAMEOBJECT)
-                return GetGameObjectData(guid);
+            if (SpawnData::TypeHasData(type))
+                return GetSpawnData(type, spawnId);
             else
-                ASSERT(false, "Invalid spawn object type %u", uint32(type));
-            return nullptr;
+                return nullptr;
+        }
+
+        SpawnData const* GetSpawnData(SpawnObjectType type, ObjectGuid::LowType spawnId) const
+        {
+            if (!SpawnData::TypeHasData(type))
+                return nullptr;
+            switch (type)
+            {
+                case SPAWN_TYPE_CREATURE:
+                    return GetCreatureData(spawnId);
+                case SPAWN_TYPE_GAMEOBJECT:
+                    return GetGameObjectData(spawnId);
+                default:
+                    ABORT_MSG("Invalid spawn object type %u", uint32(type));
+                    return nullptr;
+            }
         }
         void OnDeleteSpawnData(SpawnData const* data);
         CreatureDataContainer const& GetAllCreatureData() const { return _creatureDataStore; }
-        CreatureData const* GetCreatureData(ObjectGuid::LowType guid) const
+        CreatureData const* GetCreatureData(ObjectGuid::LowType spawnId) const
         {
-            CreatureDataContainer::const_iterator itr = _creatureDataStore.find(guid);
+            CreatureDataContainer::const_iterator itr = _creatureDataStore.find(spawnId);
             if (itr == _creatureDataStore.end()) return nullptr;
             return &itr->second;
         }
-        CreatureData& NewOrExistCreatureData(ObjectGuid::LowType guid) { return _creatureDataStore[guid]; }
-        void DeleteCreatureData(ObjectGuid::LowType guid);
-        ObjectGuid GetLinkedRespawnGuid(ObjectGuid guid) const
+        CreatureData& NewOrExistCreatureData(ObjectGuid::LowType spawnId) { return _creatureDataStore[spawnId]; }
+        void DeleteCreatureData(ObjectGuid::LowType spawnId);
+        ObjectGuid GetLinkedRespawnGuid(ObjectGuid spawnId) const
         {
-            LinkedRespawnContainer::const_iterator itr = _linkedRespawnStore.find(guid);
+            LinkedRespawnContainer::const_iterator itr = _linkedRespawnStore.find(spawnId);
             if (itr == _linkedRespawnStore.end()) return ObjectGuid::Empty;
             return itr->second;
         }
@@ -1355,14 +1368,14 @@ class TC_GAME_API ObjectMgr
             return &itr->second;
         }
         GameObjectDataContainer const& GetAllGameObjectData() const { return _gameObjectDataStore; }
-        GameObjectData const* GetGameObjectData(ObjectGuid::LowType guid) const
+        GameObjectData const* GetGameObjectData(ObjectGuid::LowType spawnId) const
         {
-            GameObjectDataContainer::const_iterator itr = _gameObjectDataStore.find(guid);
+            GameObjectDataContainer::const_iterator itr = _gameObjectDataStore.find(spawnId);
             if (itr == _gameObjectDataStore.end()) return nullptr;
             return &itr->second;
         }
-        GameObjectData& NewOrExistGameObjectData(ObjectGuid::LowType guid) { return _gameObjectDataStore[guid]; }
-        void DeleteGameObjectData(ObjectGuid::LowType guid);
+        GameObjectData& NewOrExistGameObjectData(ObjectGuid::LowType spawnId) { return _gameObjectDataStore[spawnId]; }
+        void DeleteGameObjectData(ObjectGuid::LowType spawnId);
         GameObjectLocale const* GetGameObjectLocale(uint32 entry) const
         {
             GameObjectLocaleContainer::const_iterator itr = _gameObjectLocaleStore.find(entry);
@@ -1452,12 +1465,12 @@ class TC_GAME_API ObjectMgr
 
         // reserved names
         void LoadReservedPlayersNames();
-        bool IsReservedName(std::string const& name) const;
+        bool IsReservedName(std::string_view name) const;
 
         // name with valid structure and symbols
-        static ResponseCodes CheckPlayerName(std::string const& name, LocaleConstant locale, bool create = false);
-        static PetNameInvalidReason CheckPetName(std::string const& name, LocaleConstant locale);
-        static bool IsValidCharterName(std::string const& name);
+        static ResponseCodes CheckPlayerName(std::string_view name, LocaleConstant locale, bool create = false);
+        static PetNameInvalidReason CheckPetName(std::string_view name, LocaleConstant locale);
+        static bool IsValidCharterName(std::string_view name);
 
         static bool CheckDeclinedNames(const std::wstring& w_ownname, DeclinedName const& names);
 
@@ -1467,13 +1480,14 @@ class TC_GAME_API ObjectMgr
             if (itr == _gameTeleStore.end()) return nullptr;
             return &itr->second;
         }
-        GameTele const* GetGameTele(std::string const& name) const;
-        GameTele const* GetGameTeleExactName(std::string const& name) const;
+        GameTele const* GetGameTele(std::string_view name) const;
+        GameTele const* GetGameTeleExactName(std::string_view name) const;
         GameTeleContainer const& GetGameTeleMap() const { return _gameTeleStore; }
         bool AddGameTele(GameTele& data);
-        bool DeleteGameTele(std::string const& name);
+        bool DeleteGameTele(std::string_view name);
 
         Trainer::Trainer const* GetTrainer(uint32 creatureId) const;
+        std::vector<Trainer::Trainer const*> const& GetClassTrainers(uint8 classId) const { return _classTrainers.at(classId); }
 
         VendorItemData const* GetNpcVendorItemList(uint32 entry) const
         {
@@ -1519,11 +1533,18 @@ class TC_GAME_API ObjectMgr
         // for wintergrasp only
         GraveyardContainer GraveyardStore;
 
-        static void AddLocaleString(std::string const& value, LocaleConstant localeConstant, std::vector<std::string>& data);
-        static inline void GetLocaleString(std::vector<std::string> const& data, LocaleConstant localeConstant, std::string& value)
+        static void AddLocaleString(std::string&& value, LocaleConstant localeConstant, std::vector<std::string>& data);
+        static std::string_view GetLocaleString(std::vector<std::string> const& data, size_t locale)
         {
-            if (data.size() > size_t(localeConstant) && !data[localeConstant].empty())
-                value = data[localeConstant];
+            if (locale < data.size())
+                return data[locale];
+            else
+                return {};
+        }
+        static void GetLocaleString(std::vector<std::string> const& data, LocaleConstant localeConstant, std::string& value)
+        {
+            if (std::string_view str = GetLocaleString(data, static_cast<size_t>(localeConstant)); !str.empty())
+                value.assign(str);
         }
 
         CharacterConversionMap FactionChangeAchievements;
@@ -1541,6 +1562,15 @@ class TC_GAME_API ObjectMgr
         void LoadFactionChangeTitles();
 
         bool IsTransportMap(uint32 mapId) const { return _transportMaps.count(mapId) != 0; }
+
+        VehicleSeatAddon const* GetVehicleSeatAddon(uint32 seatId) const
+        {
+            VehicleSeatAddonContainer::const_iterator itr = _vehicleSeatAddonStore.find(seatId);
+            if (itr == _vehicleSeatAddonStore.end())
+                return nullptr;
+
+            return &itr->second;
+        }
 
     private:
         // first free id for selected id type
@@ -1567,7 +1597,7 @@ class TC_GAME_API ObjectMgr
         QuestContainer _questTemplates;
 
         typedef std::unordered_map<uint32, GossipText> GossipTextContainer;
-        typedef std::unordered_map<uint32, uint32> QuestAreaTriggerContainer;
+        typedef std::map<uint32, uint32> QuestAreaTriggerContainer;
         typedef std::set<uint32> TavernAreaTriggerContainer;
         typedef std::set<uint32> GameObjectForQuestContainer;
 
@@ -1610,6 +1640,7 @@ class TC_GAME_API ObjectMgr
 
         SpellScriptsContainer _spellScriptsStore;
 
+        std::unordered_map<uint32, VehicleTemplate> _vehicleTemplateStore;
         VehicleAccessoryContainer _vehicleTemplateAccessoryStore;
         VehicleAccessoryContainer _vehicleAccessoryStore;
 
@@ -1695,7 +1726,8 @@ class TC_GAME_API ObjectMgr
 
         CacheVendorItemContainer _cacheVendorItemStore;
         std::unordered_map<uint32, Trainer::Trainer> _trainers;
-        std::unordered_map<uint32, uint32> _creatureDefaultTrainers;
+        std::unordered_map<uint8, std::vector<Trainer::Trainer const*>> _classTrainers;
+        std::unordered_map<uint32, Trainer::Trainer const*> _creatureDefaultTrainers;
 
         std::set<uint32> _difficultyEntries[MAX_DIFFICULTY - 1]; // already loaded difficulty 1 value in creatures, used in CheckCreatureTemplate
         std::set<uint32> _hasDifficultyEntries[MAX_DIFFICULTY - 1]; // already loaded creatures with difficulty 1 values, used in CheckCreatureTemplate
@@ -1703,6 +1735,7 @@ class TC_GAME_API ObjectMgr
         std::set<uint32> _transportMaps; // Helper container storing map ids that are for transports only, loaded from gameobject_template
 
         PlayerTotemModelMap _playerTotemModel;
+        VehicleSeatAddonContainer _vehicleSeatAddonStore;
 };
 
 #define sObjectMgr ObjectMgr::instance()

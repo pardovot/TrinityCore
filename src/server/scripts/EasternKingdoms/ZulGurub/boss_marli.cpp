@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2006-2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -110,16 +109,16 @@ class boss_marli : public CreatureScript
                 Talk(SAY_DEATH);
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 events.ScheduleEvent(EVENT_SPAWN_START_SPIDERS, 1s, 0, PHASE_ONE);
                 Talk(SAY_AGGRO);
             }
 
             void JustSummoned(Creature* creature) override
             {
-                creature->AI()->AttackStart(SelectTarget(SELECT_TARGET_RANDOM, 0, 0.f, true));
+                creature->AI()->AttackStart(SelectTarget(SelectTargetMethod::Random, 0, 0.f, true));
                 summons.Summon(creature);
             }
 
@@ -185,7 +184,7 @@ class boss_marli : public CreatureScript
                             int i = 0;
                             while (i++ < 3) // max 3 tries to get a random target with power_mana
                             {
-                                target = SelectTarget(SELECT_TARGET_RANDOM, 1, 100, true);  // not aggro leader
+                                target = SelectTarget(SelectTargetMethod::Random, 1, 100, true);  // not aggro leader
                                 if (target && target->GetPowerType() == POWER_MANA)
                                     break;
                             }
@@ -211,7 +210,7 @@ class boss_marli : public CreatureScript
                             events.ScheduleEvent(EVENT_TRANSFORM, 45s, 0, PHASE_TWO);
                             events.ScheduleEvent(EVENT_POISON_VOLLEY, 15s);
                             events.ScheduleEvent(EVENT_HATCH_SPIDER_EGG, 12s, 17s);
-                            events.ScheduleEvent(EVENT_TRANSFORM, urand(35000, 60000), 0, PHASE_TWO);
+                            events.ScheduleEvent(EVENT_TRANSFORM, 35s, 60s, 0, PHASE_TWO);
                             events.SetPhase(PHASE_TWO);
                             break;
                         }
@@ -306,21 +305,21 @@ class npc_spawn_of_marli : public CreatureScript
         }
 };
 
+// 24083 - Hatch Eggs
 class spell_hatch_spiders : public SpellScript
 {
-       PrepareSpellScript(spell_hatch_spiders);
+    PrepareSpellScript(spell_hatch_spiders);
 
-       void HandleObjectAreaTargetSelect(std::list<WorldObject*>& targets)
-       {
-           targets.sort(Trinity::ObjectDistanceOrderPred(GetCaster()));
-           targets.resize(GetSpellInfo()->MaxAffectedTargets);
-       }
+    void HandleObjectAreaTargetSelect(std::list<WorldObject*>& targets)
+    {
+        targets.sort(Trinity::ObjectDistanceOrderPred(GetCaster()));
+        targets.resize(GetSpellInfo()->MaxAffectedTargets);
+    }
 
-       void Register() override
-       {
-           OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_hatch_spiders::HandleObjectAreaTargetSelect, EFFECT_0, TARGET_GAMEOBJECT_DEST_AREA);
-       }
-
+    void Register() override
+    {
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_hatch_spiders::HandleObjectAreaTargetSelect, EFFECT_0, TARGET_GAMEOBJECT_DEST_AREA);
+    }
 };
 
 void AddSC_boss_marli()

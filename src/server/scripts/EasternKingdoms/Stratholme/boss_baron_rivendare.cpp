@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -110,7 +110,7 @@ public:
             switch (eventId)
             {
                 case EVENT_SHADOWBOLT:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0))
+                    if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0))
                         DoCast(target, SPELL_SHADOWBOLT);
                     events.Repeat(10s);
                     break;
@@ -156,9 +156,9 @@ struct npc_summoned_skeleton : public ScriptedAI
 {
     npc_summoned_skeleton(Creature* creature) : ScriptedAI(creature) { }
 
-    void SpellHit(Unit* /*caster*/, SpellInfo const* spell) override
+    void SpellHit(WorldObject* /*caster*/, SpellInfo const* spellInfo) override
     {
-        if (spell->Id == SPELL_DEATH_PACT_2)
+        if (spellInfo->Id == SPELL_DEATH_PACT_2)
             DoCastSelf(SPELL_DEATH_PACT_3, true);
     }
 };

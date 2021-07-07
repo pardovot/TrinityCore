@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -55,9 +55,9 @@ struct boss_arcanist_doan : public BossAI
         _healthAbove50Pct = true;
     }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
         Talk(SAY_AGGRO);
 
         events.ScheduleEvent(EVENT_SILENCE, 15s);
@@ -88,7 +88,7 @@ struct boss_arcanist_doan : public BossAI
                     events.Repeat(8s);
                     break;
                 case EVENT_POLYMORPH:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1, 30.0f, true))
+                    if (Unit* target = SelectTarget(SelectTargetMethod::Random, 1, 30.0f, true))
                         DoCast(target, SPELL_POLYMORPH);
                     events.Repeat(20s);
                     break;

@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2006-2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -46,7 +45,6 @@ enum Spells
     SPELL_WATERBOLT         = 37138,
     SPELL_SUBMERGE          = 37550,
     SPELL_EMERGE            = 20568,
-
 
     // Ambusher spells
     SPELL_SPREAD_SHOT       = 37790,
@@ -311,7 +309,7 @@ public:
 
                 if (GeyserTimer <= diff)
                 {
-                    Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1);
+                    Unit* target = SelectTarget(SelectTargetMethod::Random, 1);
                     if (!target && me->GetVictim())
                         target = me->GetVictim();
                     if (target)
@@ -325,7 +323,7 @@ public:
                 {
                     if (WaterboltTimer <= diff)
                     {
-                        Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0);
+                        Unit* target = SelectTarget(SelectTargetMethod::Random, 0);
                         if (!target && me->GetVictim())
                             target = me->GetVictim();
                         if (target)
@@ -374,7 +372,7 @@ public:
                     me->SetUInt32Value(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
                     // spawn adds
                     for (uint8 i = 0; i < 9; ++i)
-                        if (Creature* summoned = me->SummonCreature(i < 6 ? NPC_COILFANG_AMBUSHER : NPC_COILFANG_GUARDIAN, AddPos[i][0], AddPos[i][1], AddPos[i][2], 0, TEMPSUMMON_CORPSE_DESPAWN, 0))
+                        if (Creature* summoned = me->SummonCreature(i < 6 ? NPC_COILFANG_AMBUSHER : NPC_COILFANG_GUARDIAN, AddPos[i][0], AddPos[i][1], AddPos[i][2], 0, TEMPSUMMON_CORPSE_DESPAWN))
                             Summons.Summon(summoned);
                     Spawned = true;
                 }
@@ -438,7 +436,7 @@ public:
 
             if (ShootBowTimer <= diff)
             {
-                if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0))
+                if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0))
                     me->CastSpell(target, SPELL_SHOOT, CastSpellExtraArgs(TRIGGERED_FULL_MASK).AddSpellBP0(1100));
                 ShootBowTimer = 4000 + rand32() % 5000;
                 MultiShotTimer += 1500; // add global cooldown
@@ -459,7 +457,7 @@ class go_strange_pool : public GameObjectScript
 
             InstanceScript* instance;
 
-            bool GossipHello(Player* player) override
+            bool OnGossipHello(Player* player) override
             {
                 // 25%
                 if (!urand(0, 3))

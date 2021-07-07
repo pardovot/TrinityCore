@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -293,13 +293,13 @@ class spell_rog_deadly_poison : public SpellScriptLoader
 
                         for (uint8 s = 0; s < 3; ++s)
                         {
-                            if (enchant->type[s] != ITEM_ENCHANTMENT_TYPE_COMBAT_SPELL)
+                            if (enchant->Effect[s] != ITEM_ENCHANTMENT_TYPE_COMBAT_SPELL)
                                 continue;
 
-                            SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(enchant->spellid[s]);
+                            SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(enchant->EffectArg[s]);
                             if (!spellInfo)
                             {
-                                TC_LOG_ERROR("spells", "Player::CastItemCombatSpell Enchant %i, player (Name: %s, GUID: %u) cast unknown spell %i", enchant->ID, player->GetName().c_str(), player->GetGUID().GetCounter(), enchant->spellid[s]);
+                                TC_LOG_ERROR("spells", "Player::CastItemCombatSpell Enchant %i, player (Name: %s, %s) cast unknown spell %i", enchant->ID, player->GetName().c_str(), player->GetGUID().ToString().c_str(), enchant->EffectArg[s]);
                                 continue;
                             }
 
@@ -312,9 +312,9 @@ class spell_rog_deadly_poison : public SpellScriptLoader
                                 continue;
 
                             if (spellInfo->IsPositive())
-                                player->CastSpell(player, enchant->spellid[s], item);
+                                player->CastSpell(player, enchant->EffectArg[s], item);
                             else
-                                player->CastSpell(target, enchant->spellid[s], item);
+                                player->CastSpell(target, enchant->EffectArg[s], item);
                         }
                     }
                 }
@@ -928,6 +928,7 @@ public:
     void SetRedirectTarget(ObjectGuid const& guid) { _redirectTarget = guid; }
 };
 
+// 57934 - Tricks of the Trade
 class spell_rog_tricks_of_the_trade : public SpellScript
 {
     PrepareSpellScript(spell_rog_tricks_of_the_trade);
@@ -966,7 +967,7 @@ class spell_rog_tricks_of_the_trade_proc : public AuraScript
     }
 };
 
-// 51698,51700,51701 - Honor Among Thieves
+// -51698, 51700, 51701 - Honor Among Thieves
 class spell_rog_honor_among_thieves : public SpellScriptLoader
 {
 public:
@@ -1172,9 +1173,9 @@ void AddSC_rogue_spell_scripts()
     new spell_rog_setup();
     new spell_rog_shiv();
     RegisterSpellAndAuraScriptPair(spell_rog_tricks_of_the_trade, spell_rog_tricks_of_the_trade_aura);
-    RegisterAuraScript(spell_rog_tricks_of_the_trade_proc);
+    RegisterSpellScript(spell_rog_tricks_of_the_trade_proc);
     new spell_rog_honor_among_thieves();
     new spell_rog_honor_among_thieves_proc();
     new spell_rog_turn_the_tables();
-    RegisterAuraScript(spell_rog_vanish);
+    RegisterSpellScript(spell_rog_vanish);
 }

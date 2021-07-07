@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -293,8 +292,8 @@ class TC_GAME_API Group
                 worker(itr->GetSource());
         }
 
-        void BroadcastPacket(WorldPacket* packet, bool ignorePlayersInBGRaid, int group = -1, ObjectGuid ignoredPlayer = ObjectGuid::Empty);
-        void BroadcastReadyCheck(WorldPacket* packet);
+        void BroadcastPacket(WorldPacket const* packet, bool ignorePlayersInBGRaid, int group = -1, ObjectGuid ignoredPlayer = ObjectGuid::Empty);
+        void BroadcastReadyCheck(WorldPacket const* packet);
         void OfflineReadyCheck();
 
         /*********************************************************/
@@ -371,6 +370,6 @@ class TC_GAME_API Group
         uint32              m_maxEnchantingLevel;
         uint32              m_dbStoreId;                    // Represents the ID used in database (Can be reused by other groups if group was disbanded)
         bool                m_isLeaderOffline;
-        TimeTrackerSmall    m_leaderOfflineTimer;
+        TimeTracker         m_leaderOfflineTimer;
 };
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -126,7 +126,7 @@ struct npc_thalorien_dawnseeker : public ScriptedAI
     {
     }
 
-    bool GossipSelect(Player* player, uint32 menuId, uint32 /*gossipListId*/) override
+    bool OnGossipSelect(Player* player, uint32 menuId, uint32 /*gossipListId*/) override
     {
         if (menuId == MENU_EXAMINE_REMAINS)
         {
@@ -143,7 +143,7 @@ struct npc_thalorien_dawnseeker : public ScriptedAI
         {
             me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
 
-            if (Creature* thalorien = me->SummonCreature(NPC_THALORIEN_DAWNSEEKER, thalorienSummon, TEMPSUMMON_CORPSE_DESPAWN, 0))
+            if (Creature* thalorien = me->SummonCreature(NPC_THALORIEN_DAWNSEEKER, thalorienSummon, TEMPSUMMON_CORPSE_DESPAWN))
                 _thalorienGUID = thalorien->GetGUID();
             me->SummonCreatureGroup(SUMMON_SUNWELL_DEFENDER);
 
@@ -276,7 +276,7 @@ struct npc_thalorien_dawnseeker : public ScriptedAI
                     _events.ScheduleEvent(EVENT_MORLEN_1, 6s);
                     break;
                 case EVENT_SUMMON_MORLEN:
-                    if (Creature* morlen = me->SummonCreature(NPC_MORLEN_GOLDGRIP, morlenSummon, TEMPSUMMON_CORPSE_DESPAWN, 0))
+                    if (Creature* morlen = me->SummonCreature(NPC_MORLEN_GOLDGRIP, morlenSummon, TEMPSUMMON_CORPSE_DESPAWN))
                     {
                         _morlenGUID = morlen->GetGUID();
                         morlen->AI()->DoCastSelf(SPELL_BLOOD_PRESENCE);
@@ -371,7 +371,7 @@ struct npc_thalorien_dawnseeker : public ScriptedAI
                     if (Creature* thalorien = ObjectAccessor::GetCreature(*me, _thalorienGUID))
                     {
                         thalorien->SetStandState(UNIT_STAND_STATE_KNEEL);
-                        thalorien->DespawnOrUnsummon(5 * IN_MILLISECONDS);
+                        thalorien->DespawnOrUnsummon(5s);
                     }
 
                     me->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);

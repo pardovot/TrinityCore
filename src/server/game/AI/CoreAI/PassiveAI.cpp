@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -18,6 +17,7 @@
 
 #include "PassiveAI.h"
 #include "Creature.h"
+#include "MovementDefines.h"
 
 PassiveAI::PassiveAI(Creature* creature) : CreatureAI(creature)
 {
@@ -73,17 +73,16 @@ void PossessedAI::JustDied(Unit* /*u*/)
     me->RemoveFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);
 }
 
-void PossessedAI::KilledUnit(Unit* victim)
-{
-    // We killed a creature, disable victim's loot
-    if (victim->GetTypeId() == TYPEID_UNIT)
-        victim->RemoveFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);
-}
-
-void CritterAI::DamageTaken(Unit* /*done_by*/, uint32&)
+void CritterAI::JustEngagedWith(Unit* /*who*/)
 {
     if (!me->HasUnitState(UNIT_STATE_FLEEING))
         me->SetControlled(true, UNIT_STATE_FLEEING);
+}
+
+void CritterAI::MovementInform(uint32 type, uint32 /*id*/)
+{
+    if (type == TIMED_FLEEING_MOTION_TYPE)
+        EnterEvadeMode(EVADE_REASON_OTHER);
 }
 
 void CritterAI::EnterEvadeMode(EvadeReason why)

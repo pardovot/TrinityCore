@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -38,8 +38,8 @@ enum DrakuruShackles
 {
     NPC_RAGECLAW                             = 29686,
     QUEST_TROLLS_IS_GONE_CRAZY               = 12861,
-    SPELL_LEFT_CHAIN                         = 59951,
-    SPELL_RIGHT_CHAIN                        = 59952,
+    SPELL_CHAIN_OF_THE_SCURGE_RIGHT          = 54990,
+    SPELL_CHAIN_OF_THE_SCURGE_LEFT           = 55009,
     SPELL_UNLOCK_SHACKLE                     = 55083,
     SPELL_FREE_RAGECLAW                      = 55223
 };
@@ -61,7 +61,7 @@ public:
             float x, y, z;
             me->GetClosePoint(x, y, z, me->GetCombatReach() / 3, 0.1f);
 
-            if (Creature* summon = me->SummonCreature(NPC_RAGECLAW, x, y, z, 0, TEMPSUMMON_DEAD_DESPAWN, 1000))
+            if (Creature* summon = me->SummonCreature(NPC_RAGECLAW, x, y, z, 0, TEMPSUMMON_DEAD_DESPAWN, 1s))
             {
                 _rageclawGUID = summon->GetGUID();
                 LockRageclaw(summon);
@@ -73,32 +73,31 @@ public:
             // pointer check not needed
             me->SetFacingToObject(rageclaw);
             rageclaw->SetFacingToObject(me);
-
-            DoCast(rageclaw, SPELL_LEFT_CHAIN, true);
-            DoCast(rageclaw, SPELL_RIGHT_CHAIN, true);
         }
 
-        void UnlockRageclaw(Unit* who, Creature* rageclaw)
+        void UnlockRageclaw(Creature* rageclaw)
         {
-            if (!who)
-                return;
-
             // pointer check not needed
             DoCast(rageclaw, SPELL_FREE_RAGECLAW, true);
 
             me->setDeathState(DEAD);
         }
 
-        void SpellHit(Unit* caster, SpellInfo const* spell) override
+        void SpellHit(WorldObject* caster, SpellInfo const* spellInfo) override
         {
-            if (spell->Id == SPELL_UNLOCK_SHACKLE)
+            Player* playerCaster = caster->ToPlayer();
+            if (!playerCaster)
+                return;
+
+            if (spellInfo->Id == SPELL_UNLOCK_SHACKLE)
             {
-                if (caster->ToPlayer()->GetQuestStatus(QUEST_TROLLS_IS_GONE_CRAZY) == QUEST_STATUS_INCOMPLETE)
+                if (playerCaster->GetQuestStatus(QUEST_TROLLS_IS_GONE_CRAZY) == QUEST_STATUS_INCOMPLETE)
                 {
                     if (Creature* rageclaw = ObjectAccessor::GetCreature(*me, _rageclawGUID))
                     {
-                        UnlockRageclaw(caster, rageclaw);
-                        caster->ToPlayer()->KilledMonster(rageclaw->GetCreatureTemplate(), _rageclawGUID);
+                        UnlockRageclaw(rageclaw);
+                        playerCaster->KilledMonster(rageclaw->GetCreatureTemplate(), _rageclawGUID);
+                        me->RemoveAurasDueToSpell(SPELL_CHAIN_OF_THE_SCURGE_RIGHT);
                         me->DespawnOrUnsummon();
                     }
                     else
@@ -124,7 +123,6 @@ public:
 enum Rageclaw
 {
     SPELL_UNSHACKLED                         = 55085,
-    SPELL_KNEEL                              = 39656,
     SAY_RAGECLAW                             = 0
 };
 
@@ -140,23 +138,22 @@ public:
         void Reset() override
         {
             me->SetFaction(FACTION_FRIENDLY);
-            DoCast(me, SPELL_KNEEL, true); // Little Hack for kneel - Thanks Illy :P
+            DoCast(me, SPELL_CHAIN_OF_THE_SCURGE_RIGHT, true);
         }
 
         void MoveInLineOfSight(Unit* /*who*/) override { }
 
-        void SpellHit(Unit* /*caster*/, SpellInfo const* spell) override
+        void SpellHit(WorldObject* /*caster*/, SpellInfo const* spellInfo) override
         {
-            if (spell->Id == SPELL_FREE_RAGECLAW)
+            if (spellInfo->Id == SPELL_FREE_RAGECLAW)
             {
-                me->RemoveAurasDueToSpell(SPELL_LEFT_CHAIN);
-                me->RemoveAurasDueToSpell(SPELL_RIGHT_CHAIN);
-                me->RemoveAurasDueToSpell(SPELL_KNEEL);
+                me->RemoveAurasDueToSpell(SPELL_CHAIN_OF_THE_SCURGE_LEFT);
+                me->SetStandState(UNIT_STAND_STATE_STAND);
                 me->SetFaction(me->GetCreatureTemplate()->faction);
                 DoCast(me, SPELL_UNSHACKLED, true);
                 Talk(SAY_RAGECLAW);
                 me->GetMotionMaster()->MoveRandom(10);
-                me->DespawnOrUnsummon(10000);
+                me->DespawnOrUnsummon(10s);
             }
         }
     };
@@ -166,7 +163,6 @@ public:
         return new npc_captured_rageclawAI(creature);
     }
 };
-
 
 /*####
 ## npc_released_offspring_harkoa
@@ -255,12 +251,12 @@ public:
                         me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
                         me->SetUInt32Value(UNIT_NPC_EMOTESTATE, EMOTE_ONESHOT_NONE);
                         Talk(SAY_RECRUIT);
-                        _events.ScheduleEvent(EVENT_RECRUIT_2, 3000);
+                        _events.ScheduleEvent(EVENT_RECRUIT_2, 3s);
                         break;
                     case EVENT_RECRUIT_2:
                         me->SetWalk(true);
                         me->GetMotionMaster()->MovePoint(0, me->GetPositionX() + (std::cos(_heading) * 10), me->GetPositionY() + (std::sin(_heading) * 10), me->GetPositionZ());
-                        me->DespawnOrUnsummon(5000);
+                        me->DespawnOrUnsummon(5s);
                         break;
                     default:
                         break;
@@ -271,9 +267,9 @@ public:
                 return;
         }
 
-        bool GossipSelect(Player* player, uint32 /*menuId*/, uint32 /*gossipListId*/) override
+        bool OnGossipSelect(Player* player, uint32 /*menuId*/, uint32 /*gossipListId*/) override
         {
-            _events.ScheduleEvent(EVENT_RECRUIT_1, 100);
+            _events.ScheduleEvent(EVENT_RECRUIT_1, 100ms);
             CloseGossipMenuFor(player);
             me->CastSpell(player, SPELL_QUEST_CREDIT, true);
             me->SetFacingToObject(player);
@@ -312,7 +308,7 @@ public:
     {
         go_scourge_enclosureAI(GameObject* go) : GameObjectAI(go) { }
 
-        bool GossipHello(Player* player) override
+        bool OnGossipHello(Player* player) override
         {
             me->UseDoorOrButton();
             if (player->GetQuestStatus(QUEST_OUR_ONLY_HOPE) == QUEST_STATUS_INCOMPLETE)
@@ -321,7 +317,7 @@ public:
                 {
                     player->KilledMonsterCredit(gymerDummy->GetEntry(), gymerDummy->GetGUID());
                     gymerDummy->CastSpell(gymerDummy, SPELL_GYMER_LOCK_EXPLOSION, true);
-                    gymerDummy->DespawnOrUnsummon(4 * IN_MILLISECONDS);
+                    gymerDummy->DespawnOrUnsummon(4s);
                 }
             }
             return true;
@@ -494,16 +490,16 @@ public:
                    {
                         case 2:
                         case 3:
-                            _events.ScheduleEvent(EVENT_EASY_123, 100);
+                            _events.ScheduleEvent(EVENT_EASY_123, 100ms);
                             break;
                         case 4:
-                            _events.ScheduleEvent(EVENT_MEDIUM_4, 100);
+                            _events.ScheduleEvent(EVENT_MEDIUM_4, 100ms);
                             break;
                         case 5:
-                            _events.ScheduleEvent(EVENT_MEDIUM_5, 100);
+                            _events.ScheduleEvent(EVENT_MEDIUM_5, 100ms);
                             break;
                         case 6:
-                            _events.ScheduleEvent(EVENT_HARD_6, 100);
+                            _events.ScheduleEvent(EVENT_HARD_6, 100ms);
                             break;
                         default:
                             break;
@@ -566,13 +562,13 @@ public:
                 }
             }
 
-            bool GossipSelect(Player* player, uint32 /*menuId*/, uint32 /*gossipListId*/) override
+            bool OnGossipSelect(Player* player, uint32 /*menuId*/, uint32 /*gossipListId*/) override
             {
                 CloseGossipMenuFor(player);
                 DoCast(player, SPELL_ALCHEMIST_APPRENTICE_INVISBUFF);
                 _playerGUID = player->GetGUID();
                 _getingredienttry = 1;
-                _events.ScheduleEvent(EVENT_EASY_123, 100);
+                _events.ScheduleEvent(EVENT_EASY_123, 100ms);
                 return false;
             }
 
@@ -597,7 +593,7 @@ public:
     {
         go_finklesteins_cauldronAI(GameObject* go) : GameObjectAI(go) { }
 
-        bool GossipHello(Player* player) override
+        bool OnGossipHello(Player* player) override
         {
             player->CastSpell(player, SPELL_POT_CHECK);
             return true;
@@ -635,10 +631,9 @@ uint32 const FetchIngredients[21][4] =
     { SPELL_FETCH_FROZEN_SPIDER_ICHOR,        SPELL_HAVE_FROZEN_SPIDER_ICHOR,        ITEM_FROZEN_SPIDER_ICHOR,        SAY_FROZEN_SPIDER_ICHOR        }
 };
 
-/*#####
-# spell_random_ingredient_aura
-#####*/
-
+// 51015 - Random Ingredient Easy Aura
+// 51154 - Random Ingredient Medium Aura
+// 51157 - Random Ingredient Hard Aura
 class spell_random_ingredient_aura : public SpellScriptLoader
 {
     public: spell_random_ingredient_aura() : SpellScriptLoader("spell_random_ingredient_aura") { }
@@ -685,10 +680,9 @@ class spell_random_ingredient_aura : public SpellScriptLoader
         }
 };
 
-/*#####
-# spell_random_ingredient
-#####*/
-
+// 51105 - Random Ingredient Medium
+// 51107 - Random Ingredient Hard
+// 51134 - Random Ingredient Easy
 class spell_random_ingredient : public SpellScriptLoader
 {
     public: spell_random_ingredient() : SpellScriptLoader("spell_random_ingredient") { }
@@ -768,6 +762,7 @@ class spell_random_ingredient : public SpellScriptLoader
 # spell_pot_check
 #####*/
 
+// 51046 - Pot Check
 class spell_pot_check : public SpellScriptLoader
 {
     public: spell_pot_check() : SpellScriptLoader("spell_pot_check") { }
@@ -929,16 +924,22 @@ public:
             Reset();
         }
 
-        void SpellHit(Unit* caster, SpellInfo const* spell) override
+        void SpellHit(WorldObject* caster, SpellInfo const* spellInfo) override
         {
-            if (spell->Id != GYMERS_GRAB)
+            Unit* unitCaster = caster->ToUnit();
+            if (!unitCaster)
                 return;
 
-            if (Vehicle* veh = caster->GetVehicleKit())
-                if (veh->GetAvailableSeatCount() != 0)
+            if (spellInfo->Id != GYMERS_GRAB)
+                return;
+
+            if (Vehicle* veh = unitCaster->GetVehicleKit())
             {
-                me->CastSpell(caster, RIDE_VEHICLE, true);
-                me->CastSpell(caster, HEALING_WINDS, true);
+                if (veh->GetAvailableSeatCount() != 0)
+                {
+                    me->CastSpell(caster, RIDE_VEHICLE, true);
+                    me->CastSpell(caster, HEALING_WINDS, true);
+                }
             }
         }
     };
@@ -958,6 +959,7 @@ enum ScourgeDisguise
     TEXT_DISGUISE_WARNING              = 28891
 };
 
+// 51966 - Scourge Disguise
 class spell_scourge_disguise : public AuraScript
 {
     PrepareAuraScript(spell_scourge_disguise);
@@ -981,6 +983,7 @@ class spell_scourge_disguise : public AuraScript
     }
 };
 
+// 51971 - Scourge Disguise Instability
 class spell_scourge_disguise_instability : public AuraScript
 {
     PrepareAuraScript(spell_scourge_disguise_instability);
@@ -1009,6 +1012,7 @@ class spell_scourge_disguise_instability : public AuraScript
     }
 };
 
+// 52010 - Scourge Disguise Expiring
 class spell_scourge_disguise_expiring : public AuraScript
 {
     PrepareAuraScript(spell_scourge_disguise_expiring);
@@ -1026,6 +1030,7 @@ class spell_scourge_disguise_expiring : public AuraScript
     }
 };
 
+// 54089 - Drop Disguise
 class spell_drop_disguise : public SpellScript
 {
     PrepareSpellScript(spell_drop_disguise);
@@ -1043,6 +1048,64 @@ class spell_drop_disguise : public SpellScript
     }
 };
 
+/*######
+## Quest 12606: Cocooned!
+######*/
+
+enum Cocooned
+{
+    SPELL_SUMMON_SCOURGED_CAPTIVE      = 51597,
+    SPELL_SUMMON_CAPTIVE_FOOTMAN       = 51599
+};
+
+// 51596 - Cocooned: Player Not On Quest
+class spell_cocooned_not_on_quest : public SpellScript
+{
+    PrepareSpellScript(spell_cocooned_not_on_quest);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_SUMMON_SCOURGED_CAPTIVE });
+    }
+
+    void HandleDummy(SpellEffIndex /*effIndex*/)
+    {
+        GetHitUnit()->CastSpell(GetCaster(), SPELL_SUMMON_SCOURGED_CAPTIVE, true);
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_cocooned_not_on_quest::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+    }
+};
+
+// 51598 - Cocooned: Player On Quest
+class spell_cocooned_on_quest : public SpellScript
+{
+    PrepareSpellScript(spell_cocooned_on_quest);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_SUMMON_SCOURGED_CAPTIVE, SPELL_SUMMON_CAPTIVE_FOOTMAN });
+    }
+
+    void HandleDummy(SpellEffIndex /*effIndex*/)
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetHitUnit();
+
+        if (roll_chance_i(66))
+            target->CastSpell(caster, SPELL_SUMMON_SCOURGED_CAPTIVE, true);
+        else
+            target->CastSpell(caster, SPELL_SUMMON_CAPTIVE_FOOTMAN, true);
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_cocooned_on_quest::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+    }
+};
+
 void AddSC_zuldrak()
 {
     new npc_drakuru_shackles();
@@ -1057,8 +1120,10 @@ void AddSC_zuldrak()
     new spell_pot_check();
     new spell_fetch_ingredient_aura();
     new npc_storm_cloud();
-    RegisterAuraScript(spell_scourge_disguise);
-    RegisterAuraScript(spell_scourge_disguise_instability);
-    RegisterAuraScript(spell_scourge_disguise_expiring);
+    RegisterSpellScript(spell_scourge_disguise);
+    RegisterSpellScript(spell_scourge_disguise_instability);
+    RegisterSpellScript(spell_scourge_disguise_expiring);
     RegisterSpellScript(spell_drop_disguise);
+    RegisterSpellScript(spell_cocooned_not_on_quest);
+    RegisterSpellScript(spell_cocooned_on_quest);
 }

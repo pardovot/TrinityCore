@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -19,6 +18,7 @@
 #include "adtfile.h"
 #include "Banner.h"
 #include "dbcfile.h"
+#include "StringFormat.h"
 #include "vmapexport.h"
 #include "wdtfile.h"
 #include "wmo.h"
@@ -144,6 +144,7 @@ bool ExtractSingleWmo(std::string& fname)
     WMODoodadData& doodads = WmoDoodads[plain_name];
     std::swap(doodads, froot.DoodadData);
     int Wmo_nVertices = 0;
+    uint32 groupCount = 0;
     //printf("root has %d groups\n", froot->nGroups);
     if (froot.nGroups !=0)
     {
@@ -152,12 +153,8 @@ bool ExtractSingleWmo(std::string& fname)
             char temp[1024];
             strncpy(temp, fname.c_str(), 1024);
             temp[fname.length()-4] = 0;
-            char groupFileName[1024];
-            sprintf(groupFileName, "%s_%03u.wmo", temp, i);
-            //printf("Trying to open groupfile %s\n",groupFileName);
 
-            std::string s = groupFileName;
-            WMOGroup fgroup(s);
+            WMOGroup fgroup(Trinity::StringFormat("%s_%03u.wmo", temp, i));
             if (!fgroup.open(&froot))
             {
                 printf("Could not open all Group file for: %s\n", plain_name);
@@ -165,7 +162,11 @@ bool ExtractSingleWmo(std::string& fname)
                 break;
             }
 
+            if (fgroup.ShouldSkip(&froot))
+                continue;
+
             Wmo_nVertices += fgroup.ConvertToVMAPGroupWmo(output, preciseVectorData);
+            ++groupCount;
             for (uint16 groupReference : fgroup.DoodadReferences)
             {
                 if (groupReference >= doodads.Spawns.size())
@@ -182,6 +183,8 @@ bool ExtractSingleWmo(std::string& fname)
 
     fseek(output, 8, SEEK_SET); // store the correct no of vertices
     fwrite(&Wmo_nVertices,sizeof(int),1,output);
+    // store the correct no of groups
+    fwrite(&groupCount, sizeof(uint32), 1, output);
     fclose(output);
 
     // Delete the extracted file in the case of an error
@@ -229,7 +232,7 @@ void getGamePath()
 #endif
 }
 
-bool scan_patches(char* scanmatch, std::vector<std::string>& pArchiveNames)
+bool scan_patches(char const* scanmatch, std::vector<std::string>& pArchiveNames)
 {
     int i;
     char path[512];
@@ -266,7 +269,6 @@ bool fillArchiveNameVector(std::vector<std::string>& pArchiveNames)
 
     printf("\nGame path: %s\n", input_path);
 
-    char path[512];
     std::string in_path(input_path);
     std::vector<std::string> locales, searchLocales;
 
@@ -314,18 +316,16 @@ bool fillArchiveNameVector(std::vector<std::string>& pArchiveNames)
 
     // now, scan for the patch levels in the core dir
     printf("Scanning patch levels from data directory.\n");
-    sprintf(path, "%spatch", input_path);
-    if (!scan_patches(path, pArchiveNames))
+    if (!scan_patches(Trinity::StringFormat("%spatch", input_path).c_str(), pArchiveNames))
         return(false);
 
     // now, scan for the patch levels in locale dirs
     printf("Scanning patch levels from locale directories.\n");
     bool foundOne = false;
-    for (std::vector<std::string>::iterator i = locales.begin(); i != locales.end(); ++i)
+    for (std::string const& locale : locales)
     {
-        printf("Locale: %s\n", i->c_str());
-        sprintf(path, "%s%s/patch-%s", input_path, i->c_str(), i->c_str());
-        if(scan_patches(path, pArchiveNames))
+        printf("Locale: %s\n", locale.c_str());
+        if(scan_patches(Trinity::StringFormat("%s%s/patch-%s", input_path, locale.c_str(), locale.c_str()).c_str(), pArchiveNames))
             foundOne = true;
     }
 
@@ -394,7 +394,6 @@ bool processArgv(int argc, char ** argv, const char *versionString)
     }
     return result;
 }
-
 
 //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 // Main

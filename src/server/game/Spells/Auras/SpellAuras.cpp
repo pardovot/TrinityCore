@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -263,6 +262,14 @@ void AuraApplication::ClientUpdate(bool remove)
     _target->SendMessageToSet(&data, true);
 }
 
+std::string AuraApplication::GetDebugInfo() const
+{
+    std::stringstream sstr;
+    sstr << "Base: " << (GetBase() ? GetBase()->GetDebugInfo() : "NULL")
+        << "\nTarget: " << (GetTarget() ? GetTarget()->GetDebugInfo() : "NULL");
+    return sstr.str();
+}
+
 uint8 Aura::BuildEffectMaskForOwner(SpellInfo const* spellProto, uint8 availableEffectMask, WorldObject* owner)
 {
     ASSERT_NODEBUGINFO(spellProto);
@@ -293,7 +300,7 @@ uint8 Aura::BuildEffectMaskForOwner(SpellInfo const* spellProto, uint8 available
     return effMask & availableEffectMask;
 }
 
-Aura* Aura::TryRefreshStackOrCreate(AuraCreateInfo& createInfo)
+Aura* Aura::TryRefreshStackOrCreate(AuraCreateInfo& createInfo, bool updateEffectMask)
 {
     ASSERT_NODEBUGINFO(createInfo.Caster || createInfo.CasterGUID);
 
@@ -324,8 +331,9 @@ Aura* Aura::TryRefreshStackOrCreate(AuraCreateInfo& createInfo)
         Unit* unit = createInfo._owner->ToUnit();
 
         // check effmask on owner application (if existing)
-        if (AuraApplication* aurApp = foundAura->GetApplicationOfTarget(unit->GetGUID()))
-            aurApp->UpdateApplyEffectMask(effMask);
+        if (updateEffectMask)
+            if (AuraApplication* aurApp = foundAura->GetApplicationOfTarget(unit->GetGUID()))
+                aurApp->UpdateApplyEffectMask(effMask);
         return foundAura;
     }
     else
@@ -423,7 +431,7 @@ m_castItemGuid(createInfo.CastItemGUID), m_applyTime(GameTime::GetGameTime()),
 m_owner(createInfo._owner), m_timeCla(0), m_updateTargetMapInterval(0),
 _casterInfo(), m_procCharges(0), m_stackAmount(1),
 m_isRemoved(false), m_isSingleTarget(false), m_isUsingCharges(false), m_dropEvent(nullptr),
-m_procCooldown(std::chrono::steady_clock::time_point::min())
+m_procCooldown(TimePoint::min())
 {
     if (m_spellInfo->ManaPerSecond || m_spellInfo->ManaPerSecondPerLevel)
         m_timeCla = 1 * IN_MILLISECONDS;
@@ -544,8 +552,6 @@ Unit* Aura::GetCaster() const
 {
     if (GetOwner()->GetGUID() == GetCasterGUID())
         return GetUnitOwner();
-    if (AuraApplication const* aurApp = GetApplicationOfTarget(GetCasterGUID()))
-        return aurApp->GetTarget();
 
     return ObjectAccessor::GetUnit(*GetOwner(), GetCasterGUID());
 }
@@ -586,8 +592,8 @@ void Aura::_UnapplyForTarget(Unit* target, Unit* caster, AuraApplication* auraAp
     /// @todo Figure out why this happens
     if (itr == m_applications.end())
     {
-        TC_LOG_ERROR("spells", "Aura::_UnapplyForTarget, target:%u, caster:%u, spell:%u was not found in owners application map!",
-        target->GetGUID().GetCounter(), caster ? caster->GetGUID().GetCounter() : 0, auraApp->GetBase()->GetSpellInfo()->Id);
+        TC_LOG_ERROR("spells", "Aura::_UnapplyForTarget, target: %s, caster: %s, spell:%u was not found in owners application map!",
+        target->GetGUID().ToString().c_str(), caster ? caster->GetGUID().ToString().c_str() : "0", auraApp->GetBase()->GetSpellInfo()->Id);
         ABORT();
     }
 
@@ -986,7 +992,7 @@ void Aura::DropChargeDelayed(uint32 delay, AuraRemoveMode removeMode)
         return;
 
     m_dropEvent = new ChargeDropEvent(this, removeMode);
-    owner->m_Events.AddEvent(m_dropEvent, owner->m_Events.CalculateTime(delay));
+    owner->m_Events.AddEvent(m_dropEvent, owner->m_Events.CalculateTime(Milliseconds(delay)));
 }
 
 void Aura::SetStackAmount(uint8 stackAmount)
@@ -1032,7 +1038,7 @@ bool Aura::ModStackAmount(int32 num, AuraRemoveMode removeMode /*= AURA_REMOVE_B
         return true;
     }
 
-    bool refresh = stackAmount >= GetStackAmount();
+    bool refresh = stackAmount >= GetStackAmount() && (m_spellInfo->StackAmount || !m_spellInfo->HasAttribute(SPELL_ATTR1_DONT_REFRESH_DURATION_ON_RECAST));
 
     // Update stack amount
     SetStackAmount(stackAmount);
@@ -1375,10 +1381,6 @@ void Aura::HandleAuraSpecificMods(AuraApplication const* aurApp, Unit* caster, b
             case SPELLFAMILY_GENERIC:
                 switch (GetId())
                 {
-                    case 32474: // Buffeting Winds of Susurrus
-                        if (target->GetTypeId() == TYPEID_PLAYER)
-                            target->ToPlayer()->ActivateTaxiPathTo(506, GetId());
-                        break;
                     case 33572: // Gronn Lord's Grasp, becomes stoned
                         if (GetStackAmount() >= 5 && !target->HasAura(33652))
                             target->CastSpell(target, 33652, true);
@@ -1978,12 +1980,12 @@ bool Aura::CanStackWith(Aura const* existingAura) const
     return true;
 }
 
-bool Aura::IsProcOnCooldown(std::chrono::steady_clock::time_point now) const
+bool Aura::IsProcOnCooldown(TimePoint now) const
 {
     return m_procCooldown > now;
 }
 
-void Aura::AddProcCooldown(std::chrono::steady_clock::time_point cooldownEnd)
+void Aura::AddProcCooldown(TimePoint cooldownEnd)
 {
     m_procCooldown = cooldownEnd;
 }
@@ -1993,7 +1995,7 @@ void Aura::ResetProcCooldown()
     m_procCooldown = std::chrono::steady_clock::now();
 }
 
-void Aura::PrepareProcToTrigger(AuraApplication* aurApp, ProcEventInfo& eventInfo, std::chrono::steady_clock::time_point now)
+void Aura::PrepareProcToTrigger(AuraApplication* aurApp, ProcEventInfo& eventInfo, TimePoint now)
 {
     bool prepare = CallScriptPrepareProcHandlers(aurApp, eventInfo);
     if (!prepare)
@@ -2013,7 +2015,7 @@ void Aura::PrepareProcToTrigger(AuraApplication* aurApp, ProcEventInfo& eventInf
     AddProcCooldown(now + procEntry->Cooldown);
 }
 
-uint8 Aura::GetProcEffectMask(AuraApplication* aurApp, ProcEventInfo& eventInfo, std::chrono::steady_clock::time_point now) const
+uint8 Aura::GetProcEffectMask(AuraApplication* aurApp, ProcEventInfo& eventInfo, TimePoint now) const
 {
     SpellProcEntry const* procEntry = sSpellMgr->GetSpellProcEntry(GetId());
     // only auras with spell proc entry can trigger proc
@@ -2031,6 +2033,9 @@ uint8 Aura::GetProcEffectMask(AuraApplication* aurApp, ProcEventInfo& eventInfo,
         if (spell->IsTriggered() && !(procEntry->AttributesMask & PROC_ATTR_TRIGGERED_CAN_PROC) && !(eventInfo.GetTypeMask() & AUTO_ATTACK_PROC_FLAG_MASK))
             if (!GetSpellInfo()->HasAttribute(SPELL_ATTR3_CAN_PROC_WITH_TRIGGERED))
                 return 0;
+
+        if (spell->m_CastItem && (procEntry->AttributesMask & PROC_ATTR_CANT_PROC_FROM_ITEM_CAST))
+            return 0;
     }
 
     // check don't break stealth attr present
@@ -2671,7 +2676,7 @@ void UnitAura::FillTargetMap(std::unordered_map<Unit*, uint8>& targets, Unit* ca
             case SPELL_EFFECT_APPLY_AREA_AURA_PET:
                 if (!condList || sConditionMgr->IsObjectMeetToConditions(GetUnitOwner(), ref, *condList))
                     units.push_back(GetUnitOwner());
-                /* fallthrough */
+                [[fallthrough]];
             case SPELL_EFFECT_APPLY_AREA_AURA_OWNER:
             {
                 if (Unit* owner = GetUnitOwner()->GetCharmerOrOwner())

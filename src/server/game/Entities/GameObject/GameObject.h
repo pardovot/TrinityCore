@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -20,6 +19,7 @@
 #define TRINITYCORE_GAMEOBJECT_H
 
 #include "Object.h"
+#include "GridObject.h"
 #include "DatabaseEnvFwd.h"
 #include "GameObjectData.h"
 #include "Loot.h"
@@ -170,6 +170,7 @@ class TC_GAME_API GameObject : public WorldObject, public GridObject<GameObject>
         static void SetGoArtKit(uint8 artkit, GameObject* go, ObjectGuid::LowType lowguid = 0);
 
         void SetPhaseMask(uint32 newPhaseMask, bool update) override;
+
         void EnableCollision(bool enable);
 
         void Use(Unit* user);

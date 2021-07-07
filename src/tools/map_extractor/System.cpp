@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -35,7 +34,6 @@
 
 #include <G3D/Plane.h>
 #include <boost/filesystem.hpp>
-#include <unordered_map>
 
 extern ArchiveSet gOpenArchives;
 
@@ -102,7 +100,7 @@ void CreateDir(boost::filesystem::path const& path)
         return;
 
     if (!fs::create_directory(path))
-        throw new std::runtime_error("Unable to create directory" + path.string());
+        throw std::runtime_error("Unable to create directory" + path.string());
 }
 
 void Usage(char* prg)
@@ -264,7 +262,7 @@ void ReadLiquidTypeTableDBC()
 
 // Map file format data
 static char const* MAP_MAGIC         = "MAPS";
-static char const* MAP_VERSION_MAGIC = "v1.9";
+static uint32 const MAP_VERSION_MAGIC = 10;
 static char const* MAP_AREA_MAGIC    = "AREA";
 static char const* MAP_HEIGHT_MAGIC  = "MHGT";
 static char const* MAP_LIQUID_MAGIC  = "MLIQ";
@@ -381,7 +379,7 @@ bool ConvertADT(std::string const& inputPath, std::string const& outputPath, int
     // Prepare map header
     map_fileheader map;
     map.mapMagic = *reinterpret_cast<uint32 const*>(MAP_MAGIC);
-    map.versionMagic = *reinterpret_cast<uint32 const*>(MAP_VERSION_MAGIC);
+    map.versionMagic = MAP_VERSION_MAGIC;
     map.buildMagic = build;
 
     // Get area flags data
@@ -783,7 +781,10 @@ bool ConvertADT(std::string const& inputPath, std::string const& outputPath, int
                     if (minHeight > h) minHeight = h;
                 }
                 else
+                {
                     liquid_height[y][x] = CONF_use_minHeight;
+                    if (minHeight > CONF_use_minHeight) minHeight = CONF_use_minHeight;
+                }
             }
         }
         map.liquidMapOffset = map.heightMapOffset + map.heightMapSize;

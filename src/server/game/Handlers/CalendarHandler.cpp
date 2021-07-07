@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -158,7 +157,7 @@ void WorldSession::HandleCalendarGetCalendar(WorldPacket& /*recvData*/)
     {
         HolidaysEntry const* holiday = sHolidaysStore.LookupEntry(entry);
 
-        data << uint32(holiday->Id);                        // m_ID
+        data << uint32(holiday->ID);                        // m_ID
         data << uint32(holiday->Region);                    // m_region, might be looping
         data << uint32(holiday->Looping);                   // m_looping, might be region
         data << uint32(holiday->Priority);                  // m_priority
@@ -331,7 +330,7 @@ void WorldSession::HandleCalendarAddEvent(WorldPacket& recvData)
             throw;
         }
 
-        SQLTransaction trans;
+        CharacterDatabaseTransaction trans;
         if (inviteCount > 1)
             trans = CharacterDatabase.BeginTransaction();
 
@@ -490,7 +489,7 @@ void WorldSession::HandleCalendarCopyEvent(WorldPacket& recvData)
         sCalendarMgr->AddEvent(newEvent, CALENDAR_SENDTYPE_COPY);
 
         CalendarInviteStore invites = sCalendarMgr->GetEventInvites(eventId);
-        SQLTransaction trans;
+        CharacterDatabaseTransaction trans;
         if (invites.size() > 1)
             trans = CharacterDatabase.BeginTransaction();
 
@@ -844,7 +843,7 @@ void WorldSession::SendCalendarRaidLockoutUpdated(InstanceSave const* save)
 
     ObjectGuid guid = _player->GetGUID();
     TC_LOG_DEBUG("network", "SMSG_CALENDAR_RAID_LOCKOUT_UPDATED [%s] Map: %u, Difficulty %u",
-        guid.ToString().c_str(), save->GetMapId(), save->GetDifficulty());
+        guid.ToString().c_str(), save->GetMapId(), static_cast<uint32>(save->GetDifficulty()));
 
     time_t currTime = GameTime::GetGameTime();
 

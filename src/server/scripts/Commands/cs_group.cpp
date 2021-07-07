@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -17,6 +17,7 @@
 
 #include "ScriptMgr.h"
 #include "CharacterCache.h"
+#include "ChatCommandTags.h"
 #include "Chat.h"
 #include "DatabaseEnv.h"
 #include "DBCStores.h"
@@ -28,6 +29,12 @@
 #include "Player.h"
 #include "RBAC.h"
 #include "WorldSession.h"
+
+#if TRINITY_COMPILER == TRINITY_COMPILER_GNU
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
+using namespace Trinity::ChatCommands;
 
 class group_commandscript : public CommandScript
 {
@@ -41,18 +48,21 @@ public:
             { "leader",     rbac::RBAC_PERM_COMMAND_GROUP_LEADER,     false, &HandleGroupLeaderCommand,     "" },
             { "assistant",  rbac::RBAC_PERM_COMMAND_GROUP_ASSISTANT,  false, &HandleGroupAssistantCommand,  "" },
             { "maintank",   rbac::RBAC_PERM_COMMAND_GROUP_MAINTANK,   false, &HandleGroupMainTankCommand,   "" },
-            { "mainassist", rbac::RBAC_PERM_COMMAND_GROUP_MAINASSIST, false, &HandleGroupMainAssistCommand, "" },
+            { "mainassist", rbac::RBAC_PERM_COMMAND_GROUP_MAINASSIST, false, &HandleGroupMainAssistCommand, "" }
         };
 
         static std::vector<ChatCommand> groupCommandTable =
         {
-            { "set",     rbac::RBAC_PERM_COMMAND_GROUP_SET,     false, nullptr,                    "", groupSetCommandTable },
-            { "leader",  rbac::RBAC_PERM_COMMAND_GROUP_LEADER,  false, &HandleGroupLeaderCommand,  "" },
-            { "disband", rbac::RBAC_PERM_COMMAND_GROUP_DISBAND, false, &HandleGroupDisbandCommand, "" },
-            { "remove",  rbac::RBAC_PERM_COMMAND_GROUP_REMOVE,  false, &HandleGroupRemoveCommand,  "" },
-            { "join",    rbac::RBAC_PERM_COMMAND_GROUP_JOIN,    false, &HandleGroupJoinCommand,    "" },
-            { "list",    rbac::RBAC_PERM_COMMAND_GROUP_LIST,    false, &HandleGroupListCommand,    "" },
-            { "summon",  rbac::RBAC_PERM_COMMAND_GROUP_SUMMON,  false, &HandleGroupSummonCommand,  "" },
+            { "set",     rbac::RBAC_PERM_COMMAND_GROUP_SET,       false, nullptr,                    "", groupSetCommandTable },
+            { "leader",  rbac::RBAC_PERM_COMMAND_GROUP_LEADER,    false, &HandleGroupLeaderCommand,  "" },
+            { "disband", rbac::RBAC_PERM_COMMAND_GROUP_DISBAND,   false, &HandleGroupDisbandCommand, "" },
+            { "remove",  rbac::RBAC_PERM_COMMAND_GROUP_REMOVE,    false, &HandleGroupRemoveCommand,  "" },
+            { "join",    rbac::RBAC_PERM_COMMAND_GROUP_JOIN,      false, &HandleGroupJoinCommand,    "" },
+            { "list",    rbac::RBAC_PERM_COMMAND_GROUP_LIST,      false, &HandleGroupListCommand,    "" },
+            { "summon",  rbac::RBAC_PERM_COMMAND_GROUP_SUMMON,    false, &HandleGroupSummonCommand,  "" },
+            { "revive",  rbac::RBAC_PERM_COMMAND_REVIVE,          true,  &HandleGroupReviveCommand,  "" },
+            { "repair",  rbac::RBAC_PERM_COMMAND_REPAIRITEMS,     true,  &HandleGroupRepairCommand,  "" },
+            { "level",   rbac::RBAC_PERM_COMMAND_CHARACTER_LEVEL, true,  &HandleGroupLevelCommand,   "" }
         };
 
         static std::vector<ChatCommand> commandTable =
@@ -60,6 +70,96 @@ public:
             { "group", rbac::RBAC_PERM_COMMAND_GROUP, false, nullptr, "", groupCommandTable },
         };
         return commandTable;
+    }
+
+    static bool HandleGroupLevelCommand(ChatHandler* handler, Optional<PlayerIdentifier> player, int16 level)
+    {
+        if (level < 1)
+            return false;
+        if (!player)
+            player = PlayerIdentifier::FromTargetOrSelf(handler);
+        if (!player)
+            return false;
+
+        Player* target = player->GetConnectedPlayer();
+        if (!target)
+            return false;
+
+        Group* groupTarget = target->GetGroup();
+        if (!groupTarget)
+            return false;
+
+        for (GroupReference* it = groupTarget->GetFirstMember(); it != nullptr; it = it->next())
+        {
+            target = it->GetSource();
+            if (target)
+            {
+                uint8 oldlevel = static_cast<uint8>(target->GetLevel());
+
+                if (level != oldlevel)
+                {
+                    target->SetLevel(static_cast<uint8>(level));
+                    target->InitTalentForLevel();
+                    target->SetXP(0);
+                }
+
+                if (handler->needReportToTarget(target))
+                {
+                    if (oldlevel < static_cast<uint8>(level))
+                        ChatHandler(target->GetSession()).PSendSysMessage(LANG_YOURS_LEVEL_UP, handler->GetNameLink().c_str(), level);
+                    else                                                // if (oldlevel > newlevel)
+                        ChatHandler(target->GetSession()).PSendSysMessage(LANG_YOURS_LEVEL_DOWN, handler->GetNameLink().c_str(), level);
+                }
+            }
+        }
+        return true;
+    }
+
+    static bool HandleGroupReviveCommand(ChatHandler* handler, char const* args)
+    {
+        Player* playerTarget;
+        if (!handler->extractPlayerTarget((char*)args, &playerTarget))
+            return false;
+
+        Group* groupTarget = playerTarget->GetGroup();
+        if (!groupTarget)
+            return false;
+
+        for (GroupReference* it = groupTarget->GetFirstMember(); it != nullptr; it = it->next())
+        {
+            Player* target = it->GetSource();
+            if (target)
+            {
+                target->ResurrectPlayer(target->GetSession()->HasPermission(rbac::RBAC_PERM_RESURRECT_WITH_FULL_HPS) ? 1.0f : 0.5f);
+                target->SpawnCorpseBones();
+                target->SaveToDB();
+            }
+        }
+
+        return true;
+    }
+
+    // Repair group of players
+    static bool HandleGroupRepairCommand(ChatHandler* handler, char const* args)
+    {
+        Player* playerTarget;
+        if (!handler->extractPlayerTarget((char*)args, &playerTarget))
+            return false;
+
+        Group* groupTarget = playerTarget->GetGroup();
+        if (!groupTarget)
+            return false;
+
+        for (GroupReference* it = groupTarget->GetFirstMember(); it != nullptr; it = it->next())
+        {
+            Player* target = it->GetSource();
+            if (target)
+            {
+                target->DurabilityRepairAll(false, 0, false);
+            }
+        }
+
+        return true;
     }
 
     // Summon group of player
@@ -361,7 +461,7 @@ public:
         // If not, we extract it from the SQL.
         if (!groupTarget)
         {
-            PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_GROUP_MEMBER);
+            CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_GROUP_MEMBER);
             stmt->setUInt32(0, guidTarget.GetCounter());
             PreparedQueryResult resultGroup = CharacterDatabase.Query(stmt);
             if (resultGroup)
@@ -423,9 +523,9 @@ public:
                 AreaTableEntry const* area = sAreaTableStore.LookupEntry(p->GetAreaId());
                 if (area)
                 {
-                    AreaTableEntry const* zone = sAreaTableStore.LookupEntry(area->zone);
+                    AreaTableEntry const* zone = sAreaTableStore.LookupEntry(area->ParentAreaID);
                     if (zone)
-                        zoneName = zone->area_name[locale];
+                        zoneName = zone->AreaName[locale];
                 }
             }
             else

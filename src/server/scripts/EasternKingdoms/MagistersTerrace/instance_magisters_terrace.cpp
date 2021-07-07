@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -70,18 +70,12 @@ class instance_magisters_terrace : public InstanceMapScript
 
         struct instance_magisters_terrace_InstanceMapScript : public InstanceScript
         {
-            instance_magisters_terrace_InstanceMapScript(InstanceMap* map) : InstanceScript(map)
+            instance_magisters_terrace_InstanceMapScript(InstanceMap* map) : InstanceScript(map), _delrissaDeathCount(0)
             {
                 SetHeaders(DataHeader);
                 SetBossNumber(EncounterCount);
                 LoadObjectData(creatureData, gameObjectData);
                 LoadDoorData(doorData);
-                Initialize();
-            }
-
-            void Initialize() override
-            {
-                _delrissaDeathCount = 0;
             }
 
             uint32 GetData(uint32 type) const override
@@ -125,6 +119,7 @@ class instance_magisters_terrace : public InstanceMapScript
                     case NPC_SUNBLADE_BLOOD_KNIGHT:
                         if (creature->GetDistance(KaelthasTrashGroupDistanceComparisonPos) < 10.0f)
                             _kaelthasPreTrashGUIDs.insert(creature->GetGUID());
+                        break;
                     default:
                         break;
                 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -52,7 +52,7 @@ enum RollMask
     ROLL_ALL_TYPE_MASK          = 0x0F
 };
 
-#define MAX_NR_LOOT_ITEMS 16
+#define MAX_NR_LOOT_ITEMS 18
 // note: the client cannot show more than 16 items total
 #define MAX_NR_QUEST_ITEMS 32
 // unrelated to the number of quest items shown, just for reserve

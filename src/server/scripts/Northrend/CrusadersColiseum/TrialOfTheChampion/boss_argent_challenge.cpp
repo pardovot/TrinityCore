@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -125,6 +125,7 @@ class OrientationCheck
         Unit* caster;
 };
 
+// 66862, 67681 - Radiance
 class spell_eadric_radiance : public SpellScriptLoader
 {
     public:
@@ -205,7 +206,7 @@ public:
             if (MovementType != POINT_MOTION_TYPE)
                 return;
 
-            instance->SetData(BOSS_ARGENT_CHALLENGE_E, DONE);
+            instance->SetBossState(BOSS_ARGENT_CHALLENGE_E, DONE);
 
             me->DisappearAndDie();
         }
@@ -225,7 +226,7 @@ public:
             {
                 me->InterruptNonMeleeSpells(true);
 
-                if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 250, true))
+                if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 250, true))
                 {
                     if (target->IsAlive())
                     {
@@ -333,7 +334,7 @@ public:
             if (MovementType != POINT_MOTION_TYPE || Point != 0)
                 return;
 
-            instance->SetData(BOSS_ARGENT_CHALLENGE_P, DONE);
+            instance->SetBossState(BOSS_ARGENT_CHALLENGE_P, DONE);
 
             me->DisappearAndDie();
         }
@@ -351,7 +352,7 @@ public:
 
             if (uiHolyFireTimer <= uiDiff)
             {
-                if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 250, true))
+                if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 250, true))
                 {
                     if (target->IsAlive())
                         DoCast(target, SPELL_HOLY_FIRE);
@@ -364,7 +365,7 @@ public:
 
             if (uiHolySmiteTimer <= uiDiff)
             {
-                if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 250, true))
+                if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 250, true))
                 {
                     if (target->IsAlive())
                         DoCast(target, SPELL_SMITE);
@@ -457,7 +458,7 @@ public:
 
             if (uiOldWoundsTimer <= uiDiff)
             {
-                if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0))
+                if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0))
                 {
                     if (target->IsAlive())
                         DoCast(target, SPELL_OLD_WOUNDS);
@@ -473,7 +474,7 @@ public:
 
             if (uiShadowPastTimer <= uiDiff)
             {
-                if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1))
+                if (Unit* target = SelectTarget(SelectTargetMethod::Random, 1))
                 {
                     if (target->IsAlive())
                         DoCast(target, SPELL_SHADOWS_PAST);

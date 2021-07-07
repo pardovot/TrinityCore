@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -341,9 +341,9 @@ class npc_troll_volunteer : public CreatureScript
                     me->DespawnOrUnsummon();
             }
 
-            void SpellHit(Unit* caster, SpellInfo const* spell) override
+            void SpellHit(WorldObject* caster, SpellInfo const* spellInfo) override
             {
-                if (spell->Id == SPELL_AOE_TURNIN && caster->GetEntry() == NPC_URUZIN && !_complete)
+                if (spellInfo->Id == SPELL_AOE_TURNIN && caster->GetEntry() == NPC_URUZIN && !_complete)
                 {
                     _complete = true;    // Preventing from giving credit twice
                     DoCast(me, SPELL_TURNIN);
@@ -368,6 +368,7 @@ class npc_troll_volunteer : public CreatureScript
 
 typedef npc_troll_volunteer::npc_troll_volunteerAI VolunteerAI;
 
+// 75420 - Mounting Check
 class spell_mount_check : public SpellScriptLoader
 {
     public:
@@ -414,6 +415,7 @@ class spell_mount_check : public SpellScriptLoader
         }
 };
 
+// 75102 - Vol'jin's War Drums
 class spell_voljin_war_drums : public SpellScriptLoader
 {
     public:
@@ -466,7 +468,7 @@ enum VoodooSpells
     SPELL_LAUNCH    = 16716, // Launch (Whee!)
 };
 
-// 17009
+// 17009 - Voodoo
 class spell_voodoo : public SpellScriptLoader
 {
     public:

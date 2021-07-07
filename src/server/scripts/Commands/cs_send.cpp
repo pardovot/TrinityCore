@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -28,6 +28,10 @@
 #include "WorldSession.h"
 #include <iostream>
 #include "string.h"
+
+#if TRINITY_COMPILER == TRINITY_COMPILER_GNU
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 
 class send_commandscript : public CommandScript
 {
@@ -85,7 +89,7 @@ public:
         MailSender sender(MAIL_NORMAL, handler->GetSession() ? handler->GetSession()->GetPlayer()->GetGUID().GetCounter() : 0, MAIL_STATIONERY_GM);
 
         /// @todo Fix poor design
-        SQLTransaction trans = CharacterDatabase.BeginTransaction();
+        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
         MailDraft(subject, text)
             .SendMailTo(trans, MailReceiver(target, targetGuid.GetCounter()), sender);
 
@@ -186,7 +190,7 @@ public:
         // fill mail
         MailDraft draft(subject, text);
 
-        SQLTransaction trans = CharacterDatabase.BeginTransaction();
+        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
 
         for(ItemPairs::const_iterator itr = items.begin(); itr != items.end(); ++itr)
         {
@@ -243,7 +247,7 @@ public:
         // from console show nonexisting sender
         MailSender sender(MAIL_NORMAL, handler->GetSession() ? handler->GetSession()->GetPlayer()->GetGUID().GetCounter() : 0, MAIL_STATIONERY_GM);
 
-        SQLTransaction trans = CharacterDatabase.BeginTransaction();
+        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
 
         MailDraft(subject, text)
             .AddMoney(money)

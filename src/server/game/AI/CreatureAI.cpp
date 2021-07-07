@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -30,6 +29,7 @@
 #include "ObjectAccessor.h"
 #include "Player.h"
 #include "SpellMgr.h"
+#include "SpellHistory.h"
 #include "TemporarySummon.h"
 #include "Vehicle.h"
 #include "World.h"
@@ -62,6 +62,9 @@ void CreatureAI::OnCharmed(bool isNew)
         }
 
         me->LastCharmerGUID.Clear();
+
+        if (!me->IsInCombat())
+            EnterEvadeMode(EVADE_REASON_NO_HOSTILES);
     }
 
     UnitAI::OnCharmed(isNew);
@@ -79,11 +82,10 @@ void CreatureAI::DoZoneInCombat(Creature* creature /*= nullptr*/)
         return;
     }
 
-    Map::PlayerList const& playerList = map->GetPlayers();
-    if (playerList.isEmpty())
+    if (!map->HavePlayers())
         return;
 
-    for (auto const& ref : playerList)
+    for (MapReference const& ref : map->GetPlayers())
     {
         if (Player* player = ref.GetSource())
         {
@@ -159,7 +161,7 @@ static bool ShouldFollowOnSpawn(SummonPropertiesEntry const* properties)
     if (!properties)
         return false;
 
-    switch (properties->Category)
+    switch (properties->Control)
     {
         case SUMMON_CATEGORY_PET:
             return true;
@@ -168,7 +170,7 @@ static bool ShouldFollowOnSpawn(SummonPropertiesEntry const* properties)
         case SUMMON_CATEGORY_UNK:
             if (properties->Flags & 512)
                 return true;
-            switch (properties->Type)
+            switch (properties->Title)
             {
                 case SUMMON_TYPE_PET:
                 case SUMMON_TYPE_GUARDIAN:
@@ -249,7 +251,7 @@ bool CreatureAI::UpdateVictim()
     if (!me->HasReactState(REACT_PASSIVE))
     {
         if (Unit* victim = me->SelectVictim())
-            if (!me->HasSpellFocus() && victim != me->GetVictim())
+            if (victim != me->GetVictim())
                 AttackStart(victim);
 
         return me->GetVictim() != nullptr;
@@ -281,7 +283,7 @@ void CreatureAI::EngagementOver()
 {
     if (!_isEngaged)
     {
-        TC_LOG_ERROR("scripts.ai", "CreatureAI::EngagementOver called even though creature is not currently engaged. Creature debug info:\n%s", me->GetDebugInfo().c_str());
+        TC_LOG_DEBUG("scripts.ai", "CreatureAI::EngagementOver called even though creature is not currently engaged. Creature debug info:\n%s", me->GetDebugInfo().c_str());
         return;
     }
     _isEngaged = false;
@@ -291,7 +293,7 @@ void CreatureAI::EngagementOver()
 
 bool CreatureAI::_EnterEvadeMode(EvadeReason /*why*/)
 {
-    if (!IsEngaged())
+    if (me->IsInEvadeMode())
         return false;
 
     if (!me->IsAlive())
@@ -309,6 +311,8 @@ bool CreatureAI::_EnterEvadeMode(EvadeReason /*why*/)
     me->SetLastDamagedTime(0);
     me->SetCannotReachTarget(false);
     me->DoNotReacquireSpellFocusTarget();
+    me->SetTarget(ObjectGuid::Empty);
+    me->GetSpellHistory()->ResetAllCooldowns();
     EngagementOver();
 
     return true;
@@ -319,7 +323,7 @@ static const float BOUNDARY_VISUALIZE_CREATURE_SCALE = 0.25f;
 static const int8 BOUNDARY_VISUALIZE_STEP_SIZE = 1;
 static const int32 BOUNDARY_VISUALIZE_FAILSAFE_LIMIT = 750;
 static const float BOUNDARY_VISUALIZE_SPAWN_HEIGHT = 5.0f;
-int32 CreatureAI::VisualizeBoundary(uint32 duration, Unit* owner, bool fill) const
+int32 CreatureAI::VisualizeBoundary(Seconds duration, Unit* owner, bool fill) const
 {
     typedef std::pair<int32, int32> coordinate;
 
@@ -377,7 +381,7 @@ int32 CreatureAI::VisualizeBoundary(uint32 duration, Unit* owner, bool fill) con
         }
         if (fill || hasOutOfBoundsNeighbor)
         {
-            if (TempSummon* point = owner->SummonCreature(BOUNDARY_VISUALIZE_CREATURE, Position(startPosition.GetPositionX() + front.first * BOUNDARY_VISUALIZE_STEP_SIZE, startPosition.GetPositionY() + front.second * BOUNDARY_VISUALIZE_STEP_SIZE, spawnZ), TEMPSUMMON_TIMED_DESPAWN, duration * IN_MILLISECONDS))
+            if (TempSummon* point = owner->SummonCreature(BOUNDARY_VISUALIZE_CREATURE, Position(startPosition.GetPositionX() + front.first * BOUNDARY_VISUALIZE_STEP_SIZE, startPosition.GetPositionY() + front.second * BOUNDARY_VISUALIZE_STEP_SIZE, spawnZ), TEMPSUMMON_TIMED_DESPAWN, duration))
             {
                 point->SetObjectScale(BOUNDARY_VISUALIZE_CREATURE_SCALE);
                 point->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_STUNNED);
@@ -430,18 +434,18 @@ void CreatureAI::SetBoundary(CreatureBoundary const* boundary, bool negateBounda
     me->DoImmediateBoundaryCheck();
 }
 
-Creature* CreatureAI::DoSummon(uint32 entry, Position const& pos, uint32 despawnTime, TempSummonType summonType)
+Creature* CreatureAI::DoSummon(uint32 entry, Position const& pos, Milliseconds despawnTime, TempSummonType summonType)
 {
     return me->SummonCreature(entry, pos, summonType, despawnTime);
 }
 
-Creature* CreatureAI::DoSummon(uint32 entry, WorldObject* obj, float radius, uint32 despawnTime, TempSummonType summonType)
+Creature* CreatureAI::DoSummon(uint32 entry, WorldObject* obj, float radius, Milliseconds despawnTime, TempSummonType summonType)
 {
     Position pos = obj->GetRandomNearPosition(radius);
     return me->SummonCreature(entry, pos, summonType, despawnTime);
 }
 
-Creature* CreatureAI::DoSummonFlyer(uint32 entry, WorldObject* obj, float flightZ, float radius, uint32 despawnTime, TempSummonType summonType)
+Creature* CreatureAI::DoSummonFlyer(uint32 entry, WorldObject* obj, float flightZ, float radius, Milliseconds despawnTime, TempSummonType summonType)
 {
     Position pos = obj->GetRandomNearPosition(radius);
     pos.m_positionZ += flightZ;

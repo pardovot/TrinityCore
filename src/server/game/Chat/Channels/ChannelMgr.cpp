@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -45,7 +44,7 @@ ChannelMgr::~ChannelMgr()
     uint32 oldMSTime = getMSTime();
     if (uint32 days = sWorld->getIntConfig(CONFIG_PRESERVE_CUSTOM_CHANNEL_DURATION))
     {
-        PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_OLD_CHANNELS);
+        CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_OLD_CHANNELS);
         stmt->setUInt32(0, days * DAY);
         CharacterDatabase.Execute(stmt);
     }
@@ -96,7 +95,7 @@ ChannelMgr::~ChannelMgr()
 
     for (auto pair : toDelete)
     {
-        PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHANNEL);
+        CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHANNEL);
         stmt->setString(0, pair.first);
         stmt->setUInt32(1, pair.second);
         CharacterDatabase.Execute(stmt);
@@ -155,7 +154,7 @@ Channel* ChannelMgr::GetSystemChannel(uint32 channelId, AreaTableEntry const* zo
 {
     ChatChannelsEntry const* channelEntry = sChatChannelsStore.AssertEntry(channelId);
     uint32 zoneId = zoneEntry ? zoneEntry->ID : 0;
-    if (channelEntry->flags & (CHANNEL_DBC_FLAG_GLOBAL | CHANNEL_DBC_FLAG_CITY_ONLY))
+    if (channelEntry->Flags & (CHANNEL_DBC_FLAG_GLOBAL | CHANNEL_DBC_FLAG_CITY_ONLY))
         zoneId = 0;
 
     std::pair<uint32, uint32> key = std::make_pair(channelId, zoneId);
@@ -211,7 +210,7 @@ Channel* ChannelMgr::GetChannel(uint32 channelId, std::string const& name, Playe
     {
         ChatChannelsEntry const* channelEntry = sChatChannelsStore.AssertEntry(channelId);
         uint32 zoneId = zoneEntry ? zoneEntry->ID : 0;
-        if (channelEntry->flags & (CHANNEL_DBC_FLAG_GLOBAL | CHANNEL_DBC_FLAG_CITY_ONLY))
+        if (channelEntry->Flags & (CHANNEL_DBC_FLAG_GLOBAL | CHANNEL_DBC_FLAG_CITY_ONLY))
             zoneId = 0;
 
         std::pair<uint32, uint32> key = std::make_pair(channelId, zoneId);
@@ -253,7 +252,7 @@ void ChannelMgr::LeftChannel(uint32 channelId, AreaTableEntry const* zoneEntry)
 {
     ChatChannelsEntry const* channelEntry = sChatChannelsStore.AssertEntry(channelId);
     uint32 zoneId = zoneEntry ? zoneEntry->ID : 0;
-    if (channelEntry->flags & (CHANNEL_DBC_FLAG_GLOBAL | CHANNEL_DBC_FLAG_CITY_ONLY))
+    if (channelEntry->Flags & (CHANNEL_DBC_FLAG_GLOBAL | CHANNEL_DBC_FLAG_CITY_ONLY))
         zoneId = 0;
 
     std::pair<uint32, uint32> key = std::make_pair(channelId, zoneId);

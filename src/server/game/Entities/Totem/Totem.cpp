@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -72,8 +71,8 @@ void Totem::InitStats(uint32 duration)
         if (uint32 totemDisplayId = sObjectMgr->GetModelForTotem(SummonSlot(slot), Races(owner->GetRace())))
             SetDisplayId(totemDisplayId);
         else
-            TC_LOG_DEBUG("misc", "Totem with entry %u, owned by player guidlow %u (%u %s %s) in slot %u, created by spell %u, does not have a specialized model. Set to default.",
-                         GetEntry(), owner->GetGUID().GetCounter(), owner->GetLevel(), EnumUtils::ToTitle(Races(owner->GetRace())), EnumUtils::ToTitle(Classes(owner->GetClass())), slot, GetUInt32Value(UNIT_CREATED_BY_SPELL));
+            TC_LOG_DEBUG("misc", "Totem with entry %u, owned by player %s (%u %s %s) in slot %u, created by spell %u, does not have a specialized model. Set to default.",
+                         GetEntry(), owner->GetGUID().ToString().c_str(), owner->GetLevel(), EnumUtils::ToTitle(Races(owner->GetRace())), EnumUtils::ToTitle(Classes(owner->GetClass())), slot, GetUInt32Value(UNIT_CREATED_BY_SPELL));
     }
 
     Minion::InitStats(duration);
@@ -107,7 +106,7 @@ void Totem::UnSummon(uint32 msTime)
 {
     if (msTime)
     {
-        m_Events.AddEvent(new ForcedUnsummonDelayEvent(*this), m_Events.CalculateTime(msTime));
+        m_Events.AddEvent(new ForcedUnsummonDelayEvent(*this), m_Events.CalculateTime(Milliseconds(msTime)));
         return;
     }
 
@@ -158,9 +157,13 @@ void Totem::UnSummon(uint32 msTime)
 
 bool Totem::IsImmunedToSpellEffect(SpellInfo const* spellInfo, uint32 index, WorldObject const* caster) const
 {
-    /// @todo possibly all negative auras immune?
-    if (GetEntry() == 5925)
-        return false;
+    // immune to all positive spells, except of stoneclaw totem absorb and sentry totem bind sight
+    // totems positive spells have unit_caster target
+    if (spellInfo->Effects[index].Effect != SPELL_EFFECT_DUMMY &&
+        spellInfo->Effects[index].Effect != SPELL_EFFECT_SCRIPT_EFFECT &&
+        spellInfo->IsPositive() && spellInfo->Effects[index].TargetA.GetTarget() != TARGET_UNIT_CASTER &&
+        spellInfo->Effects[index].TargetA.GetCheckType() != TARGET_CHECK_ENTRY && spellInfo->Id != SENTRY_STONECLAW_SPELLID && spellInfo->Id != SENTRY_BIND_SIGHT_SPELLID)
+        return true;
 
     switch (spellInfo->Effects[index].ApplyAuraName)
     {

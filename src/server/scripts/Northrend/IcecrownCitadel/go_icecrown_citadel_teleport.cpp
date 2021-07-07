@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -25,6 +25,7 @@
 #include "Spell.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
+#include "Transport.h"
 
 static std::vector<uint32> const TeleportSpells =
 {
@@ -50,7 +51,7 @@ class icecrown_citadel_teleport : public GameObjectScript
             {
             }
 
-            bool GossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId) override
+            bool OnGossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId) override
             {
                 if (gossipListId >= TeleportSpells.size())
                     return false;
@@ -68,6 +69,11 @@ class icecrown_citadel_teleport : public GameObjectScript
                     Spell::SendCastResult(player, spell, 0, SPELL_FAILED_AFFECTING_COMBAT);
                     return true;
                 }
+
+                // If the player is on the ship, Unit::NearTeleport() will try to keep the player on the ship, causing issues.
+                // For that we simply always remove the player from the ship.
+                if (Transport* transport = player->GetTransport())
+                    transport->RemovePassenger(player);
 
                 player->CastSpell(player, teleportSpell, true);
                 return true;

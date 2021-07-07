@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://www.mangosproject.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -73,9 +72,10 @@ class TC_GAME_API PoolGroup
         bool isEmpty() const { return ExplicitlyChanced.empty() && EqualChanced.empty(); }
         void AddEntry(PoolObject& poolitem, uint32 maxentries);
         bool CheckPool() const;
-        void DespawnObject(ActivePoolData& spawns, ObjectGuid::LowType guid=0);
-        void Despawn1Object(ObjectGuid::LowType guid);
+        void DespawnObject(ActivePoolData& spawns, ObjectGuid::LowType guid=0, bool alwaysDeleteRespawnTime = false);
+        void Despawn1Object(ObjectGuid::LowType guid, bool alwaysDeleteRespawnTime = false, bool saveRespawnTime = true);
         void SpawnObject(ActivePoolData& spawns, uint32 limit, uint32 triggerFrom);
+        void RemoveRespawnTimeFromDB(ObjectGuid::LowType guid);
 
         void Spawn1Object(PoolObject* obj);
         void ReSpawn1Object(PoolObject* obj);
@@ -116,10 +116,11 @@ class TC_GAME_API PoolMgr
         bool CheckPool(uint32 pool_id) const;
 
         void SpawnPool(uint32 pool_id);
-        void DespawnPool(uint32 pool_id);
+        void DespawnPool(uint32 pool_id, bool alwaysDeleteRespawnTime = false);
 
         template<typename T>
         void UpdatePool(uint32 pool_id, uint32 db_guid_or_pool_id);
+        void UpdatePool(uint32 pool_id, SpawnObjectType type, ObjectGuid::LowType spawnId);
 
     private:
         template<typename T>

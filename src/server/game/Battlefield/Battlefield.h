@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -25,7 +25,8 @@
 
 enum BattlefieldTypes
 {
-    BATTLEFIELD_WG                                          // Wintergrasp
+    BATTLEFIELD_WG  = 1, // Wintergrasp
+    BATTLEFIELD_MAX
 };
 
 enum BattlefieldIDs
@@ -211,6 +212,8 @@ class TC_GAME_API Battlefield : public ZoneScript
 
         /// Call this to init the Battlefield
         virtual bool SetupBattlefield() { return true; }
+
+        void SendInitWorldStatesTo(Player* player);
 
         /// Update data of a worldstate to all players present in zone
         void SendUpdateWorldState(uint32 field, uint32 value);

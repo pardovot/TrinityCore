@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -31,6 +31,9 @@
 #include "ObjectAccessor.h"
 #include "WorldPacket.h"
 #include <algorithm>
+
+#include "Hacks/boost_1_74_fibonacci_heap.h"
+BOOST_1_74_FIBONACCI_HEAP_MSVC_COMPILE_FIX(ThreatManager::threat_list_heap::value_type)
 
 const CompareThreatLessThan ThreatManager::CompareThreat;
 
@@ -316,6 +319,23 @@ void ThreatManager::AddThreat(Unit* target, float amount, SpellInfo const* spell
             return;
         amount = 0.0f;
     }
+    else if (TempSummon* tempSummonVictim = target->ToTempSummon())
+    {
+        if (tempSummonVictim->IsVisibleBySummonerOnly())
+        {
+            if (Unit* tempSummonSummoner = tempSummonVictim->GetSummonerUnit())
+            {
+                // Personnal Spawns from same summoner can aggro each other
+                if (!_owner->ToTempSummon() ||
+                    !_owner->ToTempSummon()->IsVisibleBySummonerOnly() ||
+                    tempSummonVictim->GetSummonerGUID() != GetOwner()->ToTempSummon()->GetSummonerGUID())
+                {
+                    AddThreat(tempSummonSummoner, amount, spell, ignoreModifiers, ignoreRedirects);
+                    amount = 0.0f;
+                }
+            }
+        }
+    }
 
     // if we cannot actually have a threat list, we instead just set combat state and avoid creating threat refs altogether
     if (!CanHaveThreatList())
@@ -571,7 +591,7 @@ ThreatReference const* ThreatManager::ReselectVictim()
         ++it;
     }
     // we should have found the old victim at some point in the loop above, so execution should never get to this point
-    ASSERT(false, "Current victim not found in sorted threat list even though it has a reference - manager desync!");
+    ABORT_MSG("Current victim not found in sorted threat list even though it has a reference - manager desync!");
     return nullptr;
 }
 

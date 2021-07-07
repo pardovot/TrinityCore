@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2006-2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -161,7 +160,7 @@ public:
                    crew->SetFaction(FACTION_MONSTER);
         }
 
-        bool GossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId) override
+        bool OnGossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId) override
         {
             uint32 const action = player->PlayerTalkClass->GetGossipOptionAction(gossipListId);
             ClearGossipMenuFor(player);
@@ -174,7 +173,7 @@ public:
             return true;
         }
 
-        bool GossipHello(Player* player) override
+        bool OnGossipHello(Player* player) override
         {
             if (instance->GetData(EVENT_PYRAMID) == PYRAMID_KILLED_ALL_TROLLS)
             {
@@ -211,7 +210,7 @@ public:
 
         InstanceScript* instance;
 
-        bool GossipHello(Player* /*player*/) override
+        bool OnGossipHello(Player* /*player*/) override
         {
             instance->SetData(EVENT_PYRAMID, PYRAMID_CAGES_OPEN);
             //set bly & co to aggressive & start moving to top of stairs
@@ -352,7 +351,7 @@ public:
             }
         }
 
-        bool GossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId) override
+        bool OnGossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId) override
         {
             uint32 const action = player->PlayerTalkClass->GetGossipOptionAction(gossipListId);
             ClearGossipMenuFor(player);
@@ -365,7 +364,7 @@ public:
             return true;
         }
 
-        bool GossipHello(Player* player) override
+        bool OnGossipHello(Player* player) override
         {
             switch (instance->GetData(EVENT_PYRAMID))
             {
@@ -410,17 +409,17 @@ public:
     {
         go_shallow_graveAI(GameObject* go) : GameObjectAI(go) { }
 
-        bool GossipHello(Player* /*player*/) override
+        bool OnGossipHello(Player* /*player*/) override
         {
             // randomly summon a zombie or dead hero the first time a grave is used
             if (me->GetUseCount() == 0)
             {
                 uint32 randomchance = urand(0, 100);
                 if (randomchance < CHANCE_ZOMBIE)
-                    me->SummonCreature(NPC_ZOMBIE, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), 0, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 30000);
+                    me->SummonCreature(NPC_ZOMBIE, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), 0, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 30s);
                 else
                     if ((randomchance - CHANCE_ZOMBIE) < CHANCE_DEAD_HERO)
-                        me->SummonCreature(NPC_DEAD_HERO, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), 0, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 30000);
+                        me->SummonCreature(NPC_DEAD_HERO, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), 0, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 30s);
             }
             me->AddUse();
             return false;

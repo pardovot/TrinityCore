@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -35,6 +35,7 @@
 
 enum WarlockSpells
 {
+    SPELL_WARLOCK_DRAIN_SOUL_R1                     = 1120,
     SPELL_WARLOCK_CREATE_SOULSHARD                  = 43836,
     SPELL_WARLOCK_CURSE_OF_DOOM_EFFECT              = 18662,
     SPELL_WARLOCK_DEMONIC_CIRCLE_SUMMON             = 48018,
@@ -95,7 +96,7 @@ enum WarlockSpellIcons
     WARLOCK_ICON_ID_DEMONIC_PACT                    = 3220
 };
 
-// -980 Curse of Agony
+// -980 - Curse of Agony
 class spell_warl_curse_of_agony : public AuraScript
 {
     PrepareAuraScript(spell_warl_curse_of_agony);
@@ -158,7 +159,7 @@ class spell_warl_banish : public SpellScriptLoader
 
                 if (Unit* target = GetHitUnit())
                 {
-                	// Casting Banish on a banished target will remove applied aura
+                    // Casting Banish on a banished target will remove applied aura
                     if (Aura * banishAura = target->GetAura(GetSpellInfo()->Id, GetCaster()->GetGUID()))
                         banishAura->Remove();
                 }
@@ -176,7 +177,7 @@ class spell_warl_banish : public SpellScriptLoader
         }
 };
 
-// 6201 - Create Healthstone (and ranks)
+// -6201 - Create Healthstone (and ranks)
 class spell_warl_create_healthstone : public SpellScriptLoader
 {
     public:
@@ -302,6 +303,7 @@ class spell_warl_curse_of_doom : public SpellScriptLoader
         }
 };
 
+// -63156 - Decimation
 class spell_warl_decimation : public SpellScriptLoader
 {
     public:
@@ -513,6 +515,20 @@ class spell_warl_drain_soul : public SpellScriptLoader
                 });
             }
 
+            bool CheckProc(ProcEventInfo& eventInfo)
+            {
+                // Drain Soul's proc tries to happen each time the warlock lands a killing blow on a unit while channeling.
+                // Make sure that dying unit is afflicted by the caster's Drain Soul debuff in order to avoid a false positive.
+
+                Unit* caster = GetCaster();
+                Unit* victim = eventInfo.GetProcTarget();
+
+                if (caster && victim)
+                    return victim->GetAuraApplicationOfRankedSpell(SPELL_WARLOCK_DRAIN_SOUL_R1, caster->GetGUID()) != 0;
+
+                return false;
+            }
+
             void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
             {
                 PreventDefaultAction();
@@ -548,9 +564,11 @@ class spell_warl_drain_soul : public SpellScriptLoader
 
             void Register() override
             {
+                DoCheckProc += AuraCheckProcFn(spell_warl_drain_soul_AuraScript::CheckProc);
                 OnEffectPeriodic += AuraEffectPeriodicFn(spell_warl_drain_soul_AuraScript::HandleTick, EFFECT_1, SPELL_AURA_PERIODIC_DAMAGE);
                 OnEffectProc += AuraEffectProcFn(spell_warl_drain_soul_AuraScript::HandleProc, EFFECT_2, SPELL_AURA_PROC_TRIGGER_SPELL);
             }
+
         };
 
         AuraScript* GetAuraScript() const override
@@ -1130,31 +1148,27 @@ class spell_warl_seduction : public SpellScriptLoader
 };
 
 // -27285 - Seed of Corruption
-class spell_warl_seed_of_corruption : public SpellScriptLoader
+class spell_warl_seed_of_corruption : public SpellScript
 {
-    public:
-        spell_warl_seed_of_corruption() : SpellScriptLoader("spell_warl_seed_of_corruption") { }
+    PrepareSpellScript(spell_warl_seed_of_corruption);
 
-        class spell_warl_seed_of_corruption_SpellScript : public SpellScript
+    void FilterTargets(std::list<WorldObject*>& targets)
+    {
+        targets.remove_if([&](WorldObject const* target)
         {
-            PrepareSpellScript(spell_warl_seed_of_corruption_SpellScript);
+            if (Unit const* unitTarget = target->ToUnit())
+                if (WorldLocation const* dest = GetExplTargetDest())
+                    if (!unitTarget->IsWithinLOS(dest->GetPositionX(), dest->GetPositionY(), dest->GetPositionZ()))
+                        return true;
 
-            void FilterTargets(std::list<WorldObject*>& targets)
-            {
-                if (GetExplTargetUnit())
-                    targets.remove(GetExplTargetUnit());
-            }
+            return false;
+        });
+    }
 
-            void Register() override
-            {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_warl_seed_of_corruption_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENEMY);
-            }
-        };
-
-        SpellScript* GetSpellScript() const override
-        {
-            return new spell_warl_seed_of_corruption_SpellScript();
-        }
+    void Register() override
+    {
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_warl_seed_of_corruption::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENEMY);
+    }
 };
 
 // -27243 - Seed of Corruption
@@ -1557,7 +1571,7 @@ class spell_warl_unstable_affliction : public SpellScriptLoader
 
 void AddSC_warlock_spell_scripts()
 {
-    RegisterAuraScript(spell_warl_curse_of_agony);
+    RegisterSpellScript(spell_warl_curse_of_agony);
     new spell_warl_banish();
     new spell_warl_create_healthstone();
     new spell_warl_curse_of_doom();
@@ -1578,7 +1592,7 @@ void AddSC_warlock_spell_scripts()
     new spell_warl_nether_protection();
     new spell_warl_ritual_of_doom_effect();
     new spell_warl_seduction();
-    new spell_warl_seed_of_corruption();
+    RegisterSpellScript(spell_warl_seed_of_corruption);
     new spell_warl_seed_of_corruption_dummy();
     new spell_warl_seed_of_corruption_generic();
     new spell_warl_shadow_ward();

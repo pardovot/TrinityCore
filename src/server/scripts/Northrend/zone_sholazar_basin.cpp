@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -26,6 +26,7 @@
 #include "SpellAuras.h"
 #include "SpellScript.h"
 #include "Vehicle.h"
+#include "GameObject.h"
 
 /*######
 ## npc_engineer_helice
@@ -34,8 +35,9 @@
 enum EngineerHelice
 {
     // Spells
-    SPELL_EXPLODE_CRYSTAL       = 62487,
-    SPELL_FLAMES                = 64561,
+    SPELL_DETONATE_1            = 52369,
+    SPELL_DETONATE_2            = 52371,
+    SPELL_EXPLOSION             = 46419,
 
     // Yells
     SAY_WP_1                    = 0,
@@ -50,109 +52,135 @@ enum EngineerHelice
     QUEST_DISASTER              = 12688
 };
 
-class npc_engineer_helice : public CreatureScript
+struct npc_engineer_helice : public EscortAI
 {
-public:
-    npc_engineer_helice() : CreatureScript("npc_engineer_helice") { }
+    npc_engineer_helice(Creature* creature) : EscortAI(creature) {  }
 
-    struct npc_engineer_heliceAI : public EscortAI
+    void WaypointReached(uint32 waypointId, uint32 /*pathId*/) override
     {
-        npc_engineer_heliceAI(Creature* creature) : EscortAI(creature)
+        switch (waypointId)
         {
-            Initialize();
-        }
-
-        void Initialize()
-        {
-            m_uiChatTimer = 4000;
-        }
-
-        uint32 m_uiChatTimer;
-
-        void WaypointReached(uint32 waypointId, uint32 /*pathId*/) override
-        {
-            Player* player = GetPlayerForEscort();
-
-            switch (waypointId)
-            {
-                case 0:
-                    Talk(SAY_WP_2);
-                    break;
-                case 1:
-                    Talk(SAY_WP_3);
-                    me->CastSpell({ 5918.33f, 5372.91f, -98.770f }, SPELL_EXPLODE_CRYSTAL, true);
-                    me->SummonGameObject(184743, 5918.33f, 5372.91f, -98.770f, 0, QuaternionData(), TEMPSUMMON_MANUAL_DESPAWN);     //approx 3 to 4 seconds
-                    me->HandleEmoteCommand(EMOTE_ONESHOT_LAUGH);
-                    break;
-                case 2:
-                    Talk(SAY_WP_4);
-                    break;
-                case 7:
-                    Talk(SAY_WP_5);
-                    break;
-                case 8:
-                    me->CastSpell({ 5887.37f, 5379.39f, -91.289f }, SPELL_EXPLODE_CRYSTAL, true);
-                    me->SummonGameObject(184743, 5887.37f, 5379.39f, -91.289f, 0, QuaternionData(), TEMPSUMMON_MANUAL_DESPAWN);      //approx 3 to 4 seconds
-                    me->HandleEmoteCommand(EMOTE_ONESHOT_LAUGH);
-                    break;
-                case 9:
-                    Talk(SAY_WP_6);
-                    break;
-                case 13:
-                    if (player)
-                    {
-                        player->GroupEventHappens(QUEST_DISASTER, me);
-                        Talk(SAY_WP_7);
-                    }
-                    break;
-            }
-        }
-
-        void Reset() override
-        {
-            Initialize();
-        }
-
-        void JustDied(Unit* /*killer*/) override
-        {
-            if (HasEscortState(STATE_ESCORT_ESCORTING))
-            {
+            case 0:
+                Talk(SAY_WP_2);
+                break;
+            case 1:
+                Talk(SAY_WP_3);
+                DoCast(SPELL_DETONATE_1);
+                break;
+            case 7:
+                Talk(SAY_WP_5);
+                break;
+            case 8:
+                DoCast(SPELL_DETONATE_2);
+                break;
+            case 9:
+                Talk(SAY_WP_6);
+                break;
+            case 13:
                 if (Player* player = GetPlayerForEscort())
-                    player->FailQuest(QUEST_DISASTER);
-            }
-        }
-
-        void UpdateAI(uint32 uiDiff) override
-        {
-            EscortAI::UpdateAI(uiDiff);
-
-            if (HasEscortState(STATE_ESCORT_ESCORTING))
-            {
-                if (m_uiChatTimer <= uiDiff)
                 {
-                    m_uiChatTimer = 12000;
+                    player->GroupEventHappens(QUEST_DISASTER, me);
+                    Talk(SAY_WP_7);
                 }
-                else
-                    m_uiChatTimer -= uiDiff;
-            }
+                break;
+            default:
+                break;
         }
+    }
 
-        void QuestAccept(Player* player, Quest const* quest) override
-        {
-            if (quest->GetQuestId() == QUEST_DISASTER)
-            {
-                me->GetMotionMaster()->MoveJumpTo(0, 0.4f, 0.4f);
-                me->SetFaction(FACTION_ESCORTEE_N_NEUTRAL_PASSIVE);
-
-                Start(false, false, player->GetGUID());
-                Talk(SAY_WP_1);
-            }
-        }
-    };
-
-    CreatureAI* GetAI(Creature* creature) const override
+    void JustDied(Unit* /*killer*/) override
     {
-        return new npc_engineer_heliceAI(creature);
+        if (HasEscortState(STATE_ESCORT_ESCORTING))
+        {
+            if (Player* player = GetPlayerForEscort())
+                player->FailQuest(QUEST_DISASTER);
+        }
+    }
+
+    void OnQuestAccept(Player* player, Quest const* quest) override
+    {
+        if (quest->GetQuestId() == QUEST_DISASTER)
+        {
+            me->SetFaction(FACTION_ESCORTEE_N_NEUTRAL_PASSIVE);
+
+            Start(false, false, player->GetGUID());
+            Talk(SAY_WP_1);
+        }
+    }
+};
+
+class spell_q12688_detonate_1 : public SpellScript
+{
+    PrepareSpellScript(spell_q12688_detonate_1);
+
+    static constexpr uint32 SPAWN_GROUP_FLAMES = 67;
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_EXPLOSION });
+    }
+
+    void HandleDummyEffect(SpellEffIndex /*effIndex*/)
+    {
+        if (Unit* target = GetHitUnit())
+        {
+            target->CastSpell(target, SPELL_EXPLOSION);
+
+            std::vector<WorldObject*> flames;
+            target->GetMap()->SpawnGroupSpawn(SPAWN_GROUP_FLAMES, false, false, &flames);
+            target->GetMap()->SetSpawnGroupInactive(SPAWN_GROUP_FLAMES);
+            for (WorldObject* flame : flames)
+            {
+                if (GameObject* flame_go = flame->ToGameObject())
+                    flame_go->DespawnOrUnsummon(20s);
+            }
+        }
+    }
+
+    void HandleAfterHit()
+    {
+        if (Creature* caster = GetCaster()->ToCreature())
+            caster->AI()->Talk(EngineerHelice::SAY_WP_4);
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_q12688_detonate_1::HandleDummyEffect, EFFECT_0, SPELL_EFFECT_DUMMY);
+        AfterHit += SpellHitFn(spell_q12688_detonate_1::HandleAfterHit);
+    }
+};
+
+class spell_q12688_detonate_2 : public SpellScript
+{
+    PrepareSpellScript(spell_q12688_detonate_2);
+
+    static constexpr uint32 SPAWN_GROUP_FLAMES = 68;
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_EXPLOSION });
+    }
+
+    void HandleDummyEffect(SpellEffIndex /*effIndex*/)
+    {
+        if (Unit* target = GetHitUnit())
+        {
+            target->CastSpell(target, SPELL_EXPLOSION);
+
+            std::vector<WorldObject*> flames;
+            target->GetMap()->SpawnGroupSpawn(SPAWN_GROUP_FLAMES, false, false, &flames);
+            target->GetMap()->SetSpawnGroupInactive(SPAWN_GROUP_FLAMES);
+            for (WorldObject* flame : flames)
+            {
+                if (GameObject* flame_go = flame->ToGameObject())
+                    flame_go->DespawnOrUnsummon(20s);
+            }
+        }
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_q12688_detonate_2::HandleDummyEffect, EFFECT_0, SPELL_EFFECT_DUMMY);
     }
 };
 
@@ -304,7 +332,7 @@ public:
                 sayTimer -= diff;
         }
 
-        void SpellHit(Unit* caster, SpellInfo const* spellInfo) override
+        void SpellHit(WorldObject* caster, SpellInfo const* spellInfo) override
         {
             if (spellInfo->Id != SPELL_OFFER)
                 return;
@@ -370,6 +398,7 @@ enum MiscLifewarden
     SPELL_WILD_GROWTH            = 52948,
 };
 
+// 51957 - Call of the Lifewarden
 class spell_q12620_the_lifewarden_wrath : public SpellScriptLoader
 {
 public:
@@ -458,6 +487,7 @@ enum KickWhatKick
     SAY_DROSTAN_REPLY_MISS    = 0,
 };
 
+// 51330 - Shoot RJR
 class spell_q12589_shoot_rjr : public SpellScriptLoader
 {
 public:
@@ -504,9 +534,7 @@ public:
                     Creature* crunchy = shooter->FindNearestCreature(NPC_CRUNCHY, 30);
                     Creature* bird = shooter->FindNearestCreature(NPC_THICKBIRD, 30);
 
-                    if (!bird || !crunchy)
-                        ; // fall to EVENT_MISS
-                    else
+                    if (bird && crunchy)
                     {
                         shooter->CastSpell(bird, SPELL_MISS_BIRD_APPLE);
                         bird->CastSpell(bird, SPELL_BIRD_FALL);
@@ -517,11 +545,10 @@ public:
                         crunchy->GetMotionMaster()->MovePoint(0, bird->GetPositionX(), bird->GetPositionY(),
                             bird->GetMap()->GetWaterOrGroundLevel(bird->GetPhaseMask(), bird->GetPositionX(), bird->GetPositionY(), bird->GetPositionZ()));
                         /// @todo Make crunchy perform emote eat when he reaches the bird
-
                         break;
                     }
+                    [[fallthrough]];
                 }
-                /* fallthrough */
                 case EVENT_MISS:
                 {
                     shooter->CastSpell(wilhelm, SPELL_MISS_APPLE);
@@ -578,16 +605,16 @@ public:
     {
         npc_haiphoonAI(Creature* creature) : VehicleAI(creature) { }
 
-        void SpellHitTarget(Unit* target, SpellInfo const* spell) override
+        void SpellHitTarget(WorldObject* target, SpellInfo const* spellInfo) override
         {
             if (target == me)
                 return;
 
-            if (spell->Id == SPELL_DEVOUR_WIND && me->GetCharmerOrOwnerPlayerOrPlayerItself())
+            if (spellInfo->Id == SPELL_DEVOUR_WIND && me->GetCharmerOrOwnerPlayerOrPlayerItself())
             {
                 me->UpdateEntry(NPC_HAIPHOON_AIR);
             }
-            else if (spell->Id == SPELL_DEVOUR_WATER && me->GetCharmerOrOwnerPlayerOrPlayerItself())
+            else if (spellInfo->Id == SPELL_DEVOUR_WATER && me->GetCharmerOrOwnerPlayerOrPlayerItself())
             {
                 me->UpdateEntry(NPC_HAIPHOON_WATER);
             }
@@ -597,110 +624,6 @@ public:
     CreatureAI* GetAI(Creature* creature) const override
     {
         return new npc_haiphoonAI(creature);
-    }
-};
-
-/*######
-## Quest: Reconnaissance Flight (12671)
-######*/
-enum ReconnaissanceFlight
-{
-    NPC_PLANE       = 28710, // Vic's Flying Machine
-    NPC_PILOT       = 28646,
-
-    VIC_SAY_0       = 0,
-    VIC_SAY_1       = 1,
-    VIC_SAY_2       = 2,
-    VIC_SAY_3       = 3,
-    VIC_SAY_4       = 4,
-    VIC_SAY_5       = 5,
-    VIC_SAY_6       = 6,
-    PLANE_EMOTE     = 0,
-
-    SPELL_ENGINE    = 52255, // Engine on Fire
-
-    SPELL_LAND      = 52226, // Land Flying Machine
-    SPELL_CREDIT    = 53328 // Land Flying Machine Credit
-};
-
-class npc_vics_flying_machine : public CreatureScript
-{
-public:
-    npc_vics_flying_machine() : CreatureScript("npc_vics_flying_machine") { }
-
-    struct npc_vics_flying_machineAI : public VehicleAI
-    {
-        npc_vics_flying_machineAI(Creature* creature) : VehicleAI(creature) { }
-
-        void PassengerBoarded(Unit* passenger, int8 /*seatId*/, bool apply) override
-        {
-            if (apply && passenger->GetTypeId() == TYPEID_PLAYER)
-            {
-                /// @workaround - Because accessory gets unmounted when using vehicle_template_accessory.
-                /// When vehicle spawns accessory is mounted to seat 0,but when player mounts
-                /// he uses the same seat (instead of mounting to seat 1) kicking the accessory out.
-                passenger->ChangeSeat(1, false);
-                me->GetVehicleKit()->InstallAccessory(NPC_PILOT, 0, true, TEMPSUMMON_DEAD_DESPAWN, 0);
-                me->GetMotionMaster()->MovePath(NPC_PLANE, false);
-            }
-        }
-
-        void MovementInform(uint32 type, uint32 id) override
-        {
-            if (type != WAYPOINT_MOTION_TYPE)
-                return;
-
-            if (Creature* pilot = GetClosestCreatureWithEntry(me, NPC_PILOT, 10))
-                switch (id)
-                {
-                    case 5:
-                        pilot->AI()->Talk(VIC_SAY_0);
-                        break;
-                    case 11:
-                        pilot->AI()->Talk(VIC_SAY_1);
-                        break;
-                    case 12:
-                        pilot->AI()->Talk(VIC_SAY_2);
-                        break;
-                    case 14:
-                        pilot->AI()->Talk(VIC_SAY_3);
-                        break;
-                    case 15:
-                        pilot->AI()->Talk(VIC_SAY_4);
-                        break;
-                    case 17:
-                        pilot->AI()->Talk(VIC_SAY_5);
-                        break;
-                    case 21:
-                        pilot->AI()->Talk(VIC_SAY_6);
-                        break;
-                    case 25:
-                        Talk(PLANE_EMOTE);
-                        DoCast(SPELL_ENGINE);
-                        me->SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_FORCE_MOVEMENT);
-                        break;
-                }
-        }
-
-        void SpellHit(Unit* /*caster*/, SpellInfo const* spell) override
-        {
-            if (spell->Id == SPELL_LAND)
-            {
-                Unit* passenger = me->GetVehicleKit()->GetPassenger(1); // player should be on seat 1
-                if (passenger && passenger->GetTypeId() == TYPEID_PLAYER)
-                {
-                    passenger->CastSpell(passenger, SPELL_CREDIT, true);
-                    passenger->ExitVehicle();
-                }
-            }
-        }
-
-        void UpdateAI(uint32 /*diff*/) override { }
-    };
-
-    CreatureAI* GetAI(Creature* creature) const override
-    {
-        return new npc_vics_flying_machineAI(creature);
     }
 };
 
@@ -716,6 +639,8 @@ enum ShangoTracks
     SAY_INCORRECT_TRACKS   = 28635
 };
 
+// 52160 - Correct Tracks
+// 52163 - Incorrect Tracks
 class spell_shango_tracks : public SpellScriptLoader
 {
 public:
@@ -762,6 +687,7 @@ enum ReturnedSevenfold
     SPELL_DEATHBOLT             = 51855
 };
 
+// 51854 - Deathbolt
 class spell_q12611_deathbolt : public SpellScript
 {
     PrepareSpellScript(spell_q12611_deathbolt);
@@ -795,12 +721,13 @@ class spell_q12611_deathbolt : public SpellScript
 
 void AddSC_sholazar_basin()
 {
-    new npc_engineer_helice();
+    RegisterCreatureAI(npc_engineer_helice);
+    RegisterSpellScript(spell_q12688_detonate_1);
+    RegisterSpellScript(spell_q12688_detonate_2);
     new npc_jungle_punch_target();
     new spell_q12620_the_lifewarden_wrath();
     new spell_q12589_shoot_rjr();
     new npc_haiphoon();
-    new npc_vics_flying_machine();
     new spell_shango_tracks();
     RegisterSpellScript(spell_q12611_deathbolt);
 }

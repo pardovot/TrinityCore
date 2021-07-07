@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -42,12 +41,12 @@ namespace Trinity
 
 #define LOGGER_ROOT "root"
 
-typedef Appender*(*AppenderCreatorFn)(uint8 id, std::string const& name, LogLevel level, AppenderFlags flags, std::vector<char const*>&& extraArgs);
+typedef Appender*(*AppenderCreatorFn)(uint8 id, std::string const& name, LogLevel level, AppenderFlags flags, std::vector<std::string_view> const& extraArgs);
 
 template <class AppenderImpl>
-Appender* CreateAppender(uint8 id, std::string const& name, LogLevel level, AppenderFlags flags, std::vector<char const*>&& extraArgs)
+Appender* CreateAppender(uint8 id, std::string const& name, LogLevel level, AppenderFlags flags, std::vector<std::string_view> const& extraArgs)
 {
-    return new AppenderImpl(id, name, level, flags, std::forward<std::vector<char const*>>(extraArgs));
+    return new AppenderImpl(id, name, level, flags, extraArgs);
 }
 
 class TC_COMMON_API Log
@@ -70,7 +69,7 @@ class TC_COMMON_API Log
         void LoadFromConfig();
         void Close();
         bool ShouldLog(std::string const& type, LogLevel level) const;
-        bool SetLogLevel(std::string const& name, char const* level, bool isLogger = true);
+        bool SetLogLevel(std::string const& name, int32 level, bool isLogger = true);
 
         template<typename Format, typename... Args>
         inline void outMessage(std::string const& filter, LogLevel const level, Format&& fmt, Args&&... args)
@@ -94,8 +93,7 @@ class TC_COMMON_API Log
         template<class AppenderImpl>
         void RegisterAppender()
         {
-            using Index = typename AppenderImpl::TypeIndex;
-            RegisterAppender(Index::value, &CreateAppender<AppenderImpl>);
+            RegisterAppender(AppenderImpl::type, &CreateAppender<AppenderImpl>);
         }
 
         std::string const& GetLogsDir() const { return m_logsDir; }
@@ -106,7 +104,7 @@ class TC_COMMON_API Log
         void write(std::unique_ptr<LogMessage>&& msg) const;
 
         Logger const* GetLoggerByType(std::string const& type) const;
-        Appender* GetAppenderByName(std::string const& name);
+        Appender* GetAppenderByName(std::string_view name);
         uint8 NextAppenderId();
         void CreateAppenderFromConfig(std::string const& name);
         void CreateLoggerFromConfig(std::string const& name);

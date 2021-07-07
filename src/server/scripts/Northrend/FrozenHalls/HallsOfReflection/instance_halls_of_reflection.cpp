@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -84,7 +84,7 @@ class instance_halls_of_reflection : public InstanceMapScript
 
         struct instance_halls_of_reflection_InstanceMapScript : public InstanceScript
         {
-            instance_halls_of_reflection_InstanceMapScript(Map* map) : InstanceScript(map)
+            instance_halls_of_reflection_InstanceMapScript(InstanceMap* map) : InstanceScript(map)
             {
                 SetHeaders(DataHeader);
                 SetBossNumber(EncounterCount);
@@ -157,7 +157,7 @@ class instance_halls_of_reflection : public InstanceMapScript
                     case NPC_WORLD_TRIGGER:
                         if (!creature->GetTransport())
                             break;
-                        /* fallthrough */
+                        [[fallthrough]];
                     case NPC_GUNSHIP_CANNON_HORDE:
                         GunshipCannonGUIDs.insert(creature->GetGUID());
                         break;
@@ -347,14 +347,14 @@ class instance_halls_of_reflection : public InstanceMapScript
                                 if (Creature* lichking = instance->GetCreature(TheLichKingEscapeGUID))
                                 {
                                     lichking->CastSpell(nullptr, SPELL_ACHIEV_CHECK, true);
-                                    lichking->DespawnOrUnsummon(1);
+                                    lichking->DespawnOrUnsummon(1ms);
                                 }
                                 break;
                             case FAIL:
                                 DoStopTimedAchievement(ACHIEVEMENT_TIMED_TYPE_EVENT, ACHIEV_NOT_RETREATING_EVENT);
 
                                 if (Creature* jainaOrSylvanas = instance->GetCreature(JainaOrSylvanasEscapeGUID))
-                                    jainaOrSylvanas->DespawnOrUnsummon(10000);
+                                    jainaOrSylvanas->DespawnOrUnsummon(10s);
 
                                 if (Creature* icewallTarget = instance->GetCreature(IcewallTargetGUID))
                                     icewallTarget->DespawnOrUnsummon();
@@ -627,7 +627,7 @@ class instance_halls_of_reflection : public InstanceMapScript
                         {
                             for (ObjectGuid guid : waveGuidList[i])
                                 if (Creature* creature = instance->GetCreature(guid))
-                                    creature->DespawnOrUnsummon(1);
+                                    creature->DespawnOrUnsummon(1ms);
                             waveGuidList[i].clear();
                         }
                         break;

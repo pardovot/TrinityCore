@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -136,7 +136,13 @@ enum PaladinSpellIcons
     PALADIN_ICON_ID_HAMMER_OF_THE_RIGHTEOUS      = 3023
 };
 
-// 31850 - Ardent Defender
+enum MiscSpellIcons
+{
+    SPELL_ICON_ID_STRENGTH_OF_WRYNN              = 1704,
+    SPELL_ICON_ID_HELLSCREAM_WARSONG             = 937
+};
+
+// -31850 - Ardent Defender
 class spell_pal_ardent_defender : public SpellScriptLoader
 {
     public:
@@ -621,7 +627,6 @@ class spell_pal_divine_storm_dummy : public SpellScriptLoader
         class spell_pal_divine_storm_dummy_SpellScript : public SpellScript
         {
             PrepareSpellScript(spell_pal_divine_storm_dummy_SpellScript);
-
 
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
@@ -1938,6 +1943,12 @@ class spell_pal_sacred_shield : public SpellScriptLoader
                     // Battleground - Dampening
                     else if (AuraEffect const* auraEffBattlegroudDampening = caster->GetAuraEffect(SPELL_GENERIC_BATTLEGROUND_DAMPENING, EFFECT_0))
                         AddPct(amount, auraEffBattlegroudDampening->GetAmount());
+
+                    // ICC buff
+                    if (AuraEffect const* auraStrengthOfWrynn = caster->GetAuraEffect(SPELL_AURA_MOD_HEALING_DONE_PERCENT, SPELLFAMILY_GENERIC, SPELL_ICON_ID_STRENGTH_OF_WRYNN, EFFECT_2))
+                        AddPct(amount, auraStrengthOfWrynn->GetAmount());
+                    else if (AuraEffect const* auraHellscreamsWarsong = caster->GetAuraEffect(SPELL_AURA_MOD_HEALING_DONE_PERCENT, SPELLFAMILY_GENERIC, SPELL_ICON_ID_HELLSCREAM_WARSONG, EFFECT_2))
+                        AddPct(amount, auraHellscreamsWarsong->GetAmount());
                 }
             }
 
@@ -1980,7 +1991,7 @@ class spell_pal_sacred_shield_dummy : public SpellScriptLoader
                 if (!caster)
                     return;
 
-                std::chrono::steady_clock::time_point now = GameTime::GetGameTimeSteadyPoint();
+                TimePoint now = GameTime::Now();
                 if (_cooldownEnd > now)
                     return;
 
@@ -1998,7 +2009,7 @@ class spell_pal_sacred_shield_dummy : public SpellScriptLoader
             }
 
             // Cooldown tracking can't be done in DB because of T8 bonus
-            std::chrono::steady_clock::time_point _cooldownEnd = std::chrono::steady_clock::time_point::min();
+            TimePoint _cooldownEnd = std::chrono::steady_clock::time_point::min();
         };
 
         AuraScript* GetAuraScript() const override
@@ -2042,7 +2053,7 @@ class spell_pal_seal_of_righteousness : public SpellScriptLoader
                 float mws = GetTarget()->GetAttackTime(BASE_ATTACK);
                 mws /= 1000.0f;
 
-                int32 bp = int32(mws * (0.022f * ap + 0.044f * sph));
+                int32 bp = std::lroundf(mws * (0.022f * ap + 0.044f * sph));
                 CastSpellExtraArgs args(aurEff);
                 args.AddSpellBP0(bp);
                 GetTarget()->CastSpell(victim, SPELL_PALADIN_SEAL_OF_RIGHTEOUSNESS, args);
@@ -2357,7 +2368,7 @@ class spell_pal_t3_6p_bonus : public SpellScriptLoader
         }
 };
 
-// 64890 Item - Paladin T8 Holy 2P Bonus
+// 64890 - Item - Paladin T8 Holy 2P Bonus
 class spell_pal_t8_2p_bonus : public SpellScriptLoader
 {
     public:
@@ -2412,11 +2423,11 @@ void AddSC_paladin_spell_scripts()
     new spell_pal_aura_mastery();
     new spell_pal_aura_mastery_immune();
     new spell_pal_avenging_wrath();
-    RegisterAuraScript(spell_pal_beacon_of_light);
+    RegisterSpellScript(spell_pal_beacon_of_light);
     new spell_pal_blessing_of_faith();
     new spell_pal_blessing_of_sanctuary();
     new spell_pal_divine_purpose();
-    RegisterAuraScript(spell_pal_divine_sacrifice);
+    RegisterSpellScript(spell_pal_divine_sacrifice);
     new spell_pal_divine_storm();
     new spell_pal_divine_storm_dummy();
     new spell_pal_exorcism_and_holy_wrath_damage();
@@ -2425,7 +2436,7 @@ void AddSC_paladin_spell_scripts()
     new spell_pal_glyph_of_holy_light();
     new spell_pal_glyph_of_holy_light_dummy();
     new spell_pal_guarded_by_the_light();
-    RegisterAuraScript(spell_pal_hand_of_sacrifice);
+    RegisterSpellScript(spell_pal_hand_of_sacrifice);
     new spell_pal_hand_of_salvation();
     new spell_pal_heart_of_the_crusader();
     new spell_pal_holy_shock();

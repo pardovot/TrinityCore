@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -21,6 +20,7 @@
 
 #include "ZoneScript.h"
 #include "Common.h"
+#include "Duration.h"
 #include <map>
 #include <memory>
 #include <set>
@@ -42,8 +42,8 @@ namespace WorldPackets
 class AreaBoundary;
 class Creature;
 class GameObject;
+class InstanceMap;
 struct InstanceSpawnGroupInfo;
-class Map;
 class ModuleReference;
 class Player;
 class Unit;
@@ -64,6 +64,7 @@ enum EncounterFrameType
     ENCOUNTER_FRAME_UNK7                = 7 // Seems to have something to do with sorting the encounter units
 };
 
+// EnumUtils: DESCRIBE THIS
 enum EncounterState
 {
     NOT_STARTED   = 0,
@@ -154,16 +155,11 @@ typedef std::map<uint32 /*entry*/, uint32 /*type*/> ObjectInfoMap;
 class TC_GAME_API InstanceScript : public ZoneScript
 {
     public:
-        explicit InstanceScript(Map* map);
+        explicit InstanceScript(InstanceMap* map);
 
         virtual ~InstanceScript() { }
 
-        Map* instance;
-
-        // On creation, NOT load.
-        // PLEASE INITIALIZE FIELDS IN THE CONSTRUCTOR INSTEAD !!!
-        // KEEPING THIS METHOD ONLY FOR BACKWARD COMPATIBILITY !!!
-        virtual void Initialize() { }
+        InstanceMap* instance;
 
         // On instance load, exactly ONE of these methods will ALWAYS be called:
         // if we're starting without any saved instance data
@@ -211,7 +207,7 @@ class TC_GAME_API InstanceScript : public ZoneScript
         void DoCloseDoorOrButton(ObjectGuid guid);
 
         // Respawns a GO having negative spawntimesecs in gameobject-table
-        void DoRespawnGameObject(ObjectGuid guid, uint32 timeToDespawn = MINUTE);
+        void DoRespawnGameObject(ObjectGuid guid, Seconds timeToDespawn = 1min);
 
         // Sends world state update to all players in instance
         void DoUpdateWorldState(uint32 worldstateId, uint32 worldstateValue);

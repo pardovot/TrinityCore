@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -42,10 +41,7 @@ enum BattlegroundNAGameObjects
     BG_NA_OBJECT_TYPE_BUFF_2    = 184664
 };
 
-enum BattlegroundNAData
-{
-    BG_NA_REMOVE_DOORS_TIMER    = 5000
-};
+inline constexpr Seconds BG_NA_REMOVE_DOORS_TIMER    = 5s;
 
 enum BattlegroundNAEvents
 {

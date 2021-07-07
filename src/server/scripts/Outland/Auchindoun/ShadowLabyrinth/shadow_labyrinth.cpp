@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -26,6 +26,7 @@ enum Spells
     SPELL_MARK_OF_MALICE_TRIGGERED = 33494
 };
 
+// 33493 - Mark of Malice
 class spell_mark_of_malice : public SpellScriptLoader
 {
     public:

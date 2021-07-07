@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2006-2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -65,11 +64,11 @@ struct boss_herod : public BossAI
         _Reset();
     }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
         Talk(SAY_AGGRO);
         DoCast(me, SPELL_RUSHINGCHARGE);
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
 
         events.ScheduleEvent(EVENT_CLEAVE, 12s);
         events.ScheduleEvent(EVENT_WHIRLWIND, 1min);
@@ -89,7 +88,7 @@ struct boss_herod : public BossAI
         {
             Position randomNearPosition = me->GetRandomPoint(ScarletTraineePos, 5.f);
             randomNearPosition.SetOrientation(ScarletTraineePos.GetOrientation());
-            me->SummonCreature(NPC_SCARLET_TRAINEE, randomNearPosition, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 600 * IN_MILLISECONDS);
+            me->SummonCreature(NPC_SCARLET_TRAINEE, randomNearPosition, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 10min);
         }
     }
 

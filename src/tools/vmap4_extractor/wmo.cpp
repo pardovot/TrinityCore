@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -107,14 +106,16 @@ bool WMORoot::open()
             DoodadData.Spawns.resize(size / sizeof(WMO::MODD));
             f.read(DoodadData.Spawns.data(), size);
         }
+        else if (!strcmp(fourcc, "MOGN"))
+        {
+            GroupNames.resize(size);
+            f.read(GroupNames.data(), size);
+        }
         /*
         else if (!strcmp(fourcc,"MOTX"))
         {
         }
         else if (!strcmp(fourcc,"MOMT"))
-        {
-        }
-        else if (!strcmp(fourcc,"MOGN"))
         {
         }
         else if (!strcmp(fourcc,"MOGI"))
@@ -499,6 +500,22 @@ uint32 WMOGroup::GetLiquidTypeId(uint32 liquidTypeId)
     return liquidTypeId;
 }
 
+bool WMOGroup::ShouldSkip(WMORoot const* root) const
+{
+    // skip unreachable
+    if (mogpFlags & 0x80)
+        return true;
+
+    // skip antiportals
+    if (mogpFlags & 0x4000000)
+        return true;
+
+    if (groupName < int32(root->GroupNames.size()) && !strcmp(&root->GroupNames[groupName], "antiportal"))
+        return true;
+
+    return false;
+}
+
 WMOGroup::~WMOGroup()
 {
     delete [] MOPY;
@@ -571,6 +588,5 @@ void MapObject::Extract(ADT::MODF const& mapObjDef, char const* WmoInstName, uin
     uint32 nlen = strlen(WmoInstName);
     fwrite(&nlen, sizeof(uint32), 1, pDirfile);
     fwrite(WmoInstName, sizeof(char), nlen, pDirfile);
-
 
 }

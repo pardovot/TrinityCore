@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -550,7 +550,6 @@ public:
     }
 };
 
-
 class spell_warl_pet_scaling_04 : public SpellScriptLoader
 {
 public:
@@ -826,7 +825,6 @@ public:
         return new spell_warl_pet_passive_voidwalker_AuraScript();
     }
 };
-
 
 class spell_sha_pet_scaling_04 : public SpellScriptLoader
 {
@@ -1444,7 +1442,6 @@ public:
         return new spell_hun_animal_handler_AuraScript();
     }
 };
-
 
 class spell_dk_avoidance_passive : public SpellScriptLoader
 {

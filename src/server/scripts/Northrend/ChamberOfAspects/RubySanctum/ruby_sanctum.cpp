@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -71,7 +71,7 @@ class npc_xerestrasza : public CreatureScript
             void Reset() override
             {
                 _events.Reset();
-                me->RemoveFlag(UNIT_NPC_FLAGS, GOSSIP_OPTION_QUESTGIVER);
+                me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_QUESTGIVER);
             }
 
             void DoAction(int32 action) override
@@ -86,13 +86,13 @@ class npc_xerestrasza : public CreatureScript
                     me->SetWalk(true);
                     me->GetMotionMaster()->MovePoint(0, xerestraszaMovePos);
 
-                    _events.ScheduleEvent(EVENT_XERESTRASZA_EVENT_1, 16000);
-                    _events.ScheduleEvent(EVENT_XERESTRASZA_EVENT_2, 25000);
-                    _events.ScheduleEvent(EVENT_XERESTRASZA_EVENT_3, 32000);
-                    _events.ScheduleEvent(EVENT_XERESTRASZA_EVENT_4, 42000);
-                    _events.ScheduleEvent(EVENT_XERESTRASZA_EVENT_5, 51000);
-                    _events.ScheduleEvent(EVENT_XERESTRASZA_EVENT_6, 61000);
-                    _events.ScheduleEvent(EVENT_XERESTRASZA_EVENT_7, 69000);
+                    _events.ScheduleEvent(EVENT_XERESTRASZA_EVENT_1, 16s);
+                    _events.ScheduleEvent(EVENT_XERESTRASZA_EVENT_2, 25s);
+                    _events.ScheduleEvent(EVENT_XERESTRASZA_EVENT_3, 32s);
+                    _events.ScheduleEvent(EVENT_XERESTRASZA_EVENT_4, 42s);
+                    _events.ScheduleEvent(EVENT_XERESTRASZA_EVENT_5, 51s);
+                    _events.ScheduleEvent(EVENT_XERESTRASZA_EVENT_6, 61s);
+                    _events.ScheduleEvent(EVENT_XERESTRASZA_EVENT_7, 69s);
                 }
                 else if (action == ACTION_INTRO_BALTHARUS && !_introDone)
                 {
@@ -131,7 +131,7 @@ class npc_xerestrasza : public CreatureScript
                             Talk(SAY_XERESTRASZA_EVENT_6);
                             break;
                         case EVENT_XERESTRASZA_EVENT_7:
-                            me->SetFlag(UNIT_NPC_FLAGS, GOSSIP_OPTION_QUESTGIVER);
+                            me->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_QUESTGIVER);
                             Talk(SAY_XERESTRASZA_EVENT_7);
                             me->setActive(false);
                             me->SetFarVisible(false);
@@ -159,7 +159,7 @@ class at_baltharus_plateau : public OnlyOnceAreaTriggerScript
     public:
         at_baltharus_plateau() : OnlyOnceAreaTriggerScript("at_baltharus_plateau") { }
 
-        bool _OnTrigger(Player* player, AreaTriggerEntry const* /*areaTrigger*/) override
+        bool TryHandleOnce(Player* player, AreaTriggerEntry const* /*areaTrigger*/) override
         {
             // Only trigger once
             if (InstanceScript* instance = player->GetInstanceScript())

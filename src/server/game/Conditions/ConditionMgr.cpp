@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -730,7 +729,7 @@ uint32 Condition::GetSearcherTypeMaskForCondition() const
             mask |= GRID_MAP_TYPE_MASK_PLAYER;
             break;
         default:
-            ASSERT(false && "Condition::GetSearcherTypeMaskForCondition - missing condition handling!");
+            ABORT_MSG("Condition::GetSearcherTypeMaskForCondition - missing condition handling!");
             break;
     }
     return mask;
@@ -1457,7 +1456,10 @@ bool ConditionMgr::addToSpellImplicitTargetConditions(Condition* cond) const
                 }
 
                 if (!assigned)
+                {
                     delete sharedList;
+                    return false;
+                }
             }
             sharedList->push_back(cond);
             break;
@@ -1895,7 +1897,7 @@ bool ConditionMgr::isConditionTypeValid(Condition* cond) const
                 return false;
             }
 
-            if (areaEntry->zone != 0)
+            if (areaEntry->ParentAreaID != 0)
             {
                 TC_LOG_ERROR("sql.sql", "%s requires to be in area (%u) which is a subzone but zone expected, skipped.", cond->ToString(true).c_str(), cond->ConditionValue1);
                 return false;
@@ -1943,7 +1945,7 @@ bool ConditionMgr::isConditionTypeValid(Condition* cond) const
                 TC_LOG_ERROR("sql.sql", "%s has invalid state mask (%u), skipped.", cond->ToString(true).c_str(), cond->ConditionValue2);
                 return false;
             }
-            /* fallthrough */
+            [[fallthrough]];
         case CONDITION_QUESTREWARDED:
         case CONDITION_QUESTTAKEN:
         case CONDITION_QUEST_NONE:

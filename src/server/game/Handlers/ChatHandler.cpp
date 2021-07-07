@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -23,6 +22,7 @@
 #include "Channel.h"
 #include "ChannelMgr.h"
 #include "Chat.h"
+#include "ChatPackets.h"
 #include "DatabaseEnv.h"
 #include "DBCStores.h"
 #include "GameTime.h"
@@ -39,9 +39,9 @@
 #include "ScriptMgr.h"
 #include "SpellAuraEffects.h"
 #include "Util.h"
+#include "Warden.h"
 #include "World.h"
 #include "WorldPacket.h"
-#include <utf8.h>
 #include <algorithm>
 
 inline bool isNasty(uint8 c)
@@ -128,8 +128,8 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 }
                 break;
             default:
-                TC_LOG_ERROR("network", "Player %s (GUID: %u) sent a chatmessage with an invalid language/message type combination",
-                                                     GetPlayer()->GetName().c_str(), GetPlayer()->GetGUID().GetCounter());
+                TC_LOG_ERROR("network", "Player %s%s sent a chatmessage with an invalid language/message type combination",
+                                                     GetPlayer()->GetName().c_str(), GetPlayer()->GetGUID().ToString().c_str());
 
                 recvData.rfinish();
                 return;
@@ -171,7 +171,7 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
             }
         }
 
-        if (!sender->CanSpeak())
+        if (!CanSpeak())
         {
             std::string timeStr = secsToTimeString(m_muteTime - GameTime::GetGameTime());
             SendNotification(GetTrinityString(LANG_WAIT_BEFORE_SPEAKING), timeStr.c_str());
@@ -207,21 +207,27 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
         case CHAT_MSG_BATTLEGROUND_LEADER:
         case CHAT_MSG_AFK:
         case CHAT_MSG_DND:
-            recvData >> msg;
+            msg = recvData.ReadCString(lang != LANG_ADDON);
             break;
         case CHAT_MSG_WHISPER:
             recvData >> to;
-            recvData >> msg;
+            msg = recvData.ReadCString(lang != LANG_ADDON);
             break;
         case CHAT_MSG_CHANNEL:
             recvData >> channel;
-            recvData >> msg;
+            msg = recvData.ReadCString(lang != LANG_ADDON);
             break;
     }
 
     if (msg.size() > 255)
         return;
 
+    // Our Warden module also uses SendAddonMessage as a way to communicate Lua check results to the server, see if this is that
+    if ((type == CHAT_MSG_GUILD) && (lang == LANG_ADDON))
+    {
+        if (_warden && _warden->ProcessLuaCheckResponse(msg))
+            return;
+    }
 
     // no chat commands in AFK/DND autoreply, and it can be empty
     if (!(type == CHAT_MSG_AFK || type == CHAT_MSG_DND))
@@ -254,18 +260,10 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
         for (uint8 c : msg)
             if (isNasty(c))
             {
-                TC_LOG_ERROR("network", "Player %s (GUID: %u) sent a message containing invalid character %u - blocked", GetPlayer()->GetName().c_str(),
-                    GetPlayer()->GetGUID().GetCounter(), uint8(c));
+                TC_LOG_ERROR("network", "Player %s %s sent a message containing invalid character %u - blocked", GetPlayer()->GetName().c_str(),
+                    GetPlayer()->GetGUID().ToString().c_str(), uint8(c));
                 return;
             }
-
-        // validate utf8
-        if (!utf8::is_valid(msg.begin(), msg.end()))
-        {
-            TC_LOG_ERROR("network", "Player %s (GUID: %u) sent a message containing an invalid UTF8 sequence - blocked", GetPlayer()->GetName().c_str(),
-                GetPlayer()->GetGUID().GetCounter());
-            return;
-        }
 
         // collapse multiple spaces into one
         if (sWorld->getBoolConfig(CONFIG_CHAT_FAKE_MESSAGE_PREVENTING))
@@ -569,20 +567,19 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
     }
 }
 
-void WorldSession::HandleEmoteOpcode(WorldPacket& recvData)
+void WorldSession::HandleEmoteOpcode(WorldPackets::Chat::EmoteClient& packet)
 {
-    if (!GetPlayer()->IsAlive() || GetPlayer()->HasUnitState(UNIT_STATE_DIED))
-        return;
-
-    uint32 emote;
-    recvData >> emote;
+    Emote emoteId = static_cast<Emote>(packet.EmoteID);
 
     // restrict to the only emotes hardcoded in client
-    if (emote != EMOTE_ONESHOT_NONE && emote != EMOTE_ONESHOT_WAVE)
+    if (emoteId != EMOTE_ONESHOT_NONE && emoteId != EMOTE_ONESHOT_WAVE)
         return;
 
-    sScriptMgr->OnPlayerEmote(GetPlayer(), emote);
-    GetPlayer()->HandleEmoteCommand(emote);
+    if (!_player->IsAlive() || _player->HasUnitState(UNIT_STATE_DIED))
+        return;
+
+    sScriptMgr->OnPlayerEmote(_player, emoteId);
+    _player->HandleEmoteCommand(emoteId);
 }
 
 namespace Trinity
@@ -622,7 +619,7 @@ void WorldSession::HandleTextEmoteOpcode(WorldPacket& recvData)
     if (!GetPlayer()->IsAlive())
         return;
 
-    if (!GetPlayer()->CanSpeak())
+    if (!CanSpeak())
     {
         std::string timeStr = secsToTimeString(m_muteTime - GameTime::GetGameTime());
         SendNotification(GetTrinityString(LANG_WAIT_BEFORE_SPEAKING), timeStr.c_str());
@@ -642,9 +639,9 @@ void WorldSession::HandleTextEmoteOpcode(WorldPacket& recvData)
     if (!em)
         return;
 
-    uint32 emote_anim = em->textid;
+    Emote emote = static_cast<Emote>(em->EmoteID);
 
-    switch (emote_anim)
+    switch (emote)
     {
         case EMOTE_STATE_SLEEP:
         case EMOTE_STATE_SIT:
@@ -655,7 +652,7 @@ void WorldSession::HandleTextEmoteOpcode(WorldPacket& recvData)
             // Only allow text-emotes for "dead" entities (feign death included)
             if (GetPlayer()->HasUnitState(UNIT_STATE_DIED))
                 break;
-            GetPlayer()->HandleEmoteCommand(emote_anim);
+            GetPlayer()->HandleEmoteCommand(emote);
             break;
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -44,7 +44,7 @@ enum SHCreatureIds
 
 enum SHGameObjectIds
 {
-    GO_IKISS_DOOR                       = 177203,
+    GO_IKISS_DOOR                       = 183398,
     GO_TALON_KING_COFFER                = 187372
 };
 

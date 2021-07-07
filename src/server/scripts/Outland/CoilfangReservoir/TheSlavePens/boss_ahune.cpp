@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -175,9 +175,9 @@ struct boss_ahune : public BossAI
         me->SetControlled(true, UNIT_STATE_ROOT);
     }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
         events.ScheduleEvent(EVENT_INITIAL_EMERGE, 4ms);
         events.ScheduleEvent(EVENT_SYNCH_HEALTH, 3s);
     }
@@ -390,7 +390,7 @@ struct npc_ahune_bunny : public ScriptedAI
             _events.Reset();
             ResetFlameCallers();
 
-            me->SummonGameObject(GO_ICE_STONE, -69.90455f, -162.2449f, -2.366563f, 2.426008f, QuaternionData(0.0f, 0.0f, 0.9366722f, 0.3502074f), 0);
+            me->SummonGameObject(GO_ICE_STONE, -69.90455f, -162.2449f, -2.366563f, 2.426008f, QuaternionData(0.0f, 0.0f, 0.9366722f, 0.3502074f), 0s);
         }
     }
 
@@ -513,7 +513,7 @@ struct npc_earthen_ring_flamecaller : public ScriptedAI
         DoCastSelf(SPELL_FIND_OPENING_CHANNEL);
     }
 
-    void SpellHit(Unit* /*caster*/, SpellInfo const* spellInfo) override
+    void SpellHit(WorldObject* /*caster*/, SpellInfo const* spellInfo) override
     {
         switch (spellInfo->Id)
         {
@@ -591,37 +591,26 @@ private:
     uint8 _mySpot;
 };
 
-class go_ahune_ice_stone : public GameObjectScript
+struct go_ahune_ice_stone : public GameObjectAI
 {
-public:
-    go_ahune_ice_stone() : GameObjectScript("go_ahune_ice_stone") { }
+    go_ahune_ice_stone(GameObject* go) : GameObjectAI(go), _instance(go->GetInstanceScript()) { }
 
-    struct go_ahune_ice_stoneAI : public GameObjectAI
+    bool OnGossipSelect(Player* player, uint32 /*menuId*/, uint32 /*gossipListId*/) override
     {
-        go_ahune_ice_stoneAI(GameObject* go) : GameObjectAI(go), _instance(go->GetInstanceScript()) { }
+        ClearGossipMenuFor(player);
 
-        bool GossipSelect(Player* player, uint32 /*menuId*/, uint32 /*gossipListId*/) override
-        {
-            ClearGossipMenuFor(player);
+        if (Creature* ahuneBunny = _instance->GetCreature(DATA_AHUNE_BUNNY))
+            ahuneBunny->AI()->DoAction(ACTION_START_EVENT);
 
-            if (Creature* ahuneBunny = _instance->GetCreature(DATA_AHUNE_BUNNY))
-                ahuneBunny->AI()->DoAction(ACTION_START_EVENT);
-
-            if (Creature* luma = _instance->GetCreature(DATA_LUMA_SKYMOTHER))
-                luma->CastSpell(player, SPELL_SUMMONING_RHYME_AURA, true);
-            CloseGossipMenuFor(player);
-            me->Delete();
-            return true;
-        }
-
-    private:
-        InstanceScript* _instance;
-    };
-
-    GameObjectAI* GetAI(GameObject* go) const override
-    {
-        return GetSlavePensAI<go_ahune_ice_stoneAI>(go);
+        if (Creature* luma = _instance->GetCreature(DATA_LUMA_SKYMOTHER))
+            luma->CastSpell(player, SPELL_SUMMONING_RHYME_AURA, true);
+        CloseGossipMenuFor(player);
+        me->Delete();
+        return true;
     }
+
+private:
+    InstanceScript* _instance;
 };
 
 // 46430 - Synch Health
@@ -870,14 +859,14 @@ void AddSC_boss_ahune()
     RegisterSlavePensCreatureAI(npc_frozen_core);
     RegisterSlavePensCreatureAI(npc_earthen_ring_flamecaller);
     RegisterSlavePensCreatureAI(npc_ahune_bunny);
-    new go_ahune_ice_stone();
+    RegisterSlavePensGameObjectAI(go_ahune_ice_stone);
     RegisterSpellScript(spell_ahune_synch_health);
-    RegisterAuraScript(spell_summoning_rhyme_aura);
-    RegisterAuraScript(spell_summon_ice_spear_delayer);
-    RegisterAuraScript(spell_ice_spear_control_aura);
+    RegisterSpellScript(spell_summoning_rhyme_aura);
+    RegisterSpellScript(spell_summon_ice_spear_delayer);
+    RegisterSpellScript(spell_ice_spear_control_aura);
     RegisterSpellScript(spell_ice_spear_target_picker);
     RegisterSpellScript(spell_slippery_floor_periodic);
-    RegisterAuraScript(spell_ahune_spanky_hands);
+    RegisterSpellScript(spell_ahune_spanky_hands);
     RegisterSpellScript(spell_ahune_minion_despawner);
     RegisterSpellScript(spell_ice_bombardment_dest_picker);
 }

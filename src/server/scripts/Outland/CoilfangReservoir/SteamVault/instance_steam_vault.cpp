@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -22,14 +22,13 @@
 #include "GameObjectAI.h"
 #include "InstanceScript.h"
 #include "Log.h"
-#include "Map.h"
 #include "steam_vault.h"
 
 struct go_main_chambers_access_panel : public GameObjectAI
 {
     go_main_chambers_access_panel(GameObject* go) : GameObjectAI(go), _instance(go->GetInstanceScript()) { }
 
-    bool GossipHello(Player* /*player*/) override
+    bool OnGossipHello(Player* /*player*/) override
     {
         if (Creature* controller = _instance->GetCreature(DATA_DOOR_CONTROLLER))
             controller->AI()->Talk(CONTROLLER_TEXT_ACESS_USED);
@@ -67,7 +66,7 @@ class instance_steam_vault : public InstanceMapScript
 
         struct instance_steam_vault_InstanceMapScript : public InstanceScript
         {
-            instance_steam_vault_InstanceMapScript(Map* map) : InstanceScript(map)
+            instance_steam_vault_InstanceMapScript(InstanceMap* map) : InstanceScript(map)
             {
                 SetHeaders(DataHeader);
                 SetBossNumber(EncounterCount);

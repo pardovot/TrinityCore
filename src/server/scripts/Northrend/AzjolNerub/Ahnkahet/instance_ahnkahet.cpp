@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -59,7 +59,7 @@ class instance_ahnkahet : public InstanceMapScript
 
         struct instance_ahnkahet_InstanceScript : public InstanceScript
         {
-            instance_ahnkahet_InstanceScript(Map* map) : InstanceScript(map)
+            instance_ahnkahet_InstanceScript(InstanceMap* map) : InstanceScript(map)
             {
                 SetHeaders(DataHeader);
                 SetBossNumber(EncounterCount);
@@ -172,5 +172,5 @@ class spell_combined_toxins : public AuraScript
 void AddSC_instance_ahnkahet()
 {
     new instance_ahnkahet();
-    RegisterAuraScript(spell_combined_toxins);
+    RegisterSpellScript(spell_combined_toxins);
 }

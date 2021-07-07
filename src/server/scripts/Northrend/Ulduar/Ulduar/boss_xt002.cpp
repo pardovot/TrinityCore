@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -139,7 +139,7 @@ enum Misc
 
 struct boss_xt002 : public BossAI
 {
-    boss_xt002(Creature* creature) : BossAI(creature, BOSS_XT002)
+    boss_xt002(Creature* creature) : BossAI(creature, DATA_XT002)
     {
         Initialize();
     }
@@ -183,10 +183,10 @@ struct boss_xt002 : public BossAI
         _DespawnAtEvade();
     }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
         Talk(SAY_AGGRO);
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
         events.ScheduleEvent(EVENT_SEARING_LIGHT, Is25ManRaid() ? 9s : 11s, GROUP_SEARING_GRAVITY, PHASE_1);
         events.ScheduleEvent(EVENT_GRAVITY_BOMB, Is25ManRaid() ? 18s : 21s, GROUP_SEARING_GRAVITY, PHASE_1);
         events.ScheduleEvent(EVENT_ENRAGE, 10min);
@@ -198,7 +198,7 @@ struct boss_xt002 : public BossAI
     void DoAction(int32 action) override
     {
         if (action == ACTION_ENTER_HARD_MODE)
-            events.ScheduleEvent(EVENT_ENTER_HARD_MODE, 1);
+            events.ScheduleEvent(EVENT_ENTER_HARD_MODE, 1ms);
     }
 
     void KilledUnit(Unit* who) override
@@ -397,9 +397,14 @@ struct npc_xt002_heart : public NullCreatureAI
 {
     npc_xt002_heart(Creature* creature) : NullCreatureAI(creature), _instance(creature->GetInstanceScript()) { }
 
+    void Reset() override
+    {
+        me->SetRegenerateHealth(false);
+    }
+
     void DoAction(int32 action) override
     {
-        Creature* xt002 = _instance->GetCreature(BOSS_XT002);
+        Creature* xt002 = _instance->GetCreature(DATA_XT002);
         if (!xt002)
             return;
 
@@ -409,19 +414,19 @@ struct npc_xt002_heart : public NullCreatureAI
             DoCast(xt002, SPELL_RIDE_VEHICLE_EXPOSED, true);
             DoCastSelf(SPELL_HEART_OVERLOAD);
             me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
-            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_UNK_29);
+            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PREVENT_EMOTES_FROM_CHAT_TEXT);
         }
         else if (action == ACTION_DISPOSE_HEART)
         {
             DoCast(xt002, SPELL_HEART_RIDE_VEHICLE, true);
             me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
-            me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_UNK_29);
+            me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PREVENT_EMOTES_FROM_CHAT_TEXT);
         }
     }
 
     void JustDied(Unit* /*killer*/) override
     {
-        if (Creature* xt002 = _instance->GetCreature(BOSS_XT002))
+        if (Creature* xt002 = _instance->GetCreature(DATA_XT002))
             xt002->AI()->DoAction(ACTION_ENTER_HARD_MODE);
     }
 
@@ -438,31 +443,31 @@ struct npc_scrapbot : public ScriptedAI
         me->SetReactState(REACT_PASSIVE);
         _scheduler.CancelAll();
 
-        if (_instance->GetBossState(BOSS_XT002) != IN_PROGRESS)
+        if (_instance->GetBossState(DATA_XT002) != IN_PROGRESS)
         {
             me->DespawnOrUnsummon();
             return;
         }
 
-        if (Creature* xt002 = _instance->GetCreature(BOSS_XT002))
+        if (Creature* xt002 = _instance->GetCreature(DATA_XT002))
             xt002->AI()->JustSummoned(me);
 
         _scheduler.
             Schedule(2s, [this](TaskContext /*StartMove*/)
             {
-                if (Creature* xt002 = _instance->GetCreature(BOSS_XT002))
+                if (Creature* xt002 = _instance->GetCreature(DATA_XT002))
                     me->GetMotionMaster()->MoveFollow(xt002, 0.0f, 0.0f);
             })
             .Schedule(1s, [this](TaskContext checkXt002)
             {
-                if (Creature* xt002 = _instance->GetCreature(BOSS_XT002))
+                if (Creature* xt002 = _instance->GetCreature(DATA_XT002))
                 {
                     if (me->IsWithinMeleeRange(xt002))
                     {
                         DoCast(xt002, SPELL_SCRAPBOT_RIDE_VEHICLE);
                         _scheduler.Schedule(1s, [this](TaskContext /*ScrapRepair*/)
                         {
-                            if (Creature* xt002 = _instance->GetCreature(BOSS_XT002))
+                            if (Creature* xt002 = _instance->GetCreature(DATA_XT002))
                                 xt002->CastSpell(me, SPELL_SCRAP_REPAIR, true);
                             me->DespawnOrUnsummon(1s);
                         });
@@ -494,14 +499,13 @@ struct npc_pummeller : public ScriptedAI
         me->SetReactState(REACT_PASSIVE);
         _scheduler.CancelAll();
 
-        if (_instance->GetBossState(BOSS_XT002) != IN_PROGRESS)
+        if (_instance->GetBossState(DATA_XT002) != IN_PROGRESS)
         {
             me->DespawnOrUnsummon();
             return;
         }
 
-
-        if (Creature* xt002 = _instance->GetCreature(BOSS_XT002))
+        if (Creature* xt002 = _instance->GetCreature(DATA_XT002))
             xt002->AI()->JustSummoned(me);
 
         _scheduler.
@@ -554,7 +558,7 @@ struct npc_boombot : public ScriptedAI
         me->SetReactState(REACT_PASSIVE);
         _scheduler.CancelAll();
 
-        if (_instance->GetBossState(BOSS_XT002) != IN_PROGRESS)
+        if (_instance->GetBossState(DATA_XT002) != IN_PROGRESS)
         {
             me->DespawnOrUnsummon();
             return;
@@ -566,19 +570,19 @@ struct npc_boombot : public ScriptedAI
         me->SetFloatValue(UNIT_FIELD_MINDAMAGE, 15000.0f);
         me->SetFloatValue(UNIT_FIELD_MAXDAMAGE, 18000.0f);
 
-        if (Creature* xt002 = _instance->GetCreature(BOSS_XT002))
+        if (Creature* xt002 = _instance->GetCreature(DATA_XT002))
             xt002->AI()->JustSummoned(me);
 
         _scheduler.
             Schedule(4s, [this](TaskContext /*StartMove*/)
             {
-                if (Creature* xt002 = _instance->GetCreature(BOSS_XT002))
+                if (Creature* xt002 = _instance->GetCreature(DATA_XT002))
                     me->GetMotionMaster()->MoveFollow(xt002, 0.0f, 0.0f);
 
             })
             .Schedule(1s, [this](TaskContext checkXt002)
             {
-                if (Creature* xt002 = _instance->GetCreature(BOSS_XT002))
+                if (Creature* xt002 = _instance->GetCreature(DATA_XT002))
                 {
                     if (me->IsWithinMeleeRange(xt002))
                         DoCastAOE(SPELL_BOOM);
@@ -610,7 +614,6 @@ private:
     bool _boomed;
     TaskScheduler _scheduler;
 };
-
 
 struct npc_life_spark : public ScriptedAI
 {
@@ -679,8 +682,7 @@ private:
     TaskScheduler _scheduler;
 };
 
-/* 63018 - Searing Light
-   65121 - Searing Light */
+// 63018, 65121 - Searing Light
 class spell_xt002_searing_light_spawn_life_spark : public AuraScript
 {
     PrepareAuraScript(spell_xt002_searing_light_spawn_life_spark);
@@ -704,8 +706,7 @@ class spell_xt002_searing_light_spawn_life_spark : public AuraScript
     }
 };
 
-/* 63024 - Gravity Bomb
-   64234 - Gravity Bomb */
+// 63024, 64234 - Gravity Bomb
 class spell_xt002_gravity_bomb_aura : public AuraScript
 {
     PrepareAuraScript(spell_xt002_gravity_bomb_aura);
@@ -741,8 +742,7 @@ class spell_xt002_gravity_bomb_aura : public AuraScript
     }
 };
 
-/*  63025 - Gravity Bomb
-    64233 - Gravity Bomb */
+// 63025, 64233 - Gravity Bomb (Damage)
 class spell_xt002_gravity_bomb_damage : public SpellScript
 {
     PrepareSpellScript(spell_xt002_gravity_bomb_damage);
@@ -751,7 +751,7 @@ class spell_xt002_gravity_bomb_damage : public SpellScript
     {
         if (GetHitDamage() >= int32(GetHitUnit()->GetHealth()))
             if (InstanceScript* instance = GetCaster()->GetInstanceScript())
-                if (Creature* xt002 = instance->GetCreature(BOSS_XT002))
+                if (Creature* xt002 = instance->GetCreature(DATA_XT002))
                     xt002->AI()->SetData(DATA_GRAVITY_BOMB_CASUALTY, 1);
     }
 
@@ -807,7 +807,7 @@ class spell_xt002_heart_overload_periodic : public SpellScript
     }
 };
 
-// 62826 Energy Orb
+// 62826 - Energy Orb
 class spell_xt002_energy_orb : public SpellScript
 {
     PrepareSpellScript(spell_xt002_energy_orb);
@@ -953,7 +953,7 @@ class spell_xt002_exposed_heart : public AuraScript
     void HandleLifeTransfer(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         if (InstanceScript* instance = GetTarget()->GetInstanceScript())
-            if (Creature* xt002 = instance->GetCreature(BOSS_XT002))
+            if (Creature* xt002 = instance->GetCreature(DATA_XT002))
                 xt002->AI()->SetData(DATA_TRANSFERED_HEALTH, _damageAmount);
     }
 
@@ -1019,15 +1019,15 @@ void AddSC_boss_xt002()
     RegisterUlduarCreatureAI(npc_life_spark);
     RegisterUlduarCreatureAI(npc_xt_void_zone);
 
-    RegisterAuraScript(spell_xt002_searing_light_spawn_life_spark);
-    RegisterAuraScript(spell_xt002_gravity_bomb_aura);
+    RegisterSpellScript(spell_xt002_searing_light_spawn_life_spark);
+    RegisterSpellScript(spell_xt002_gravity_bomb_aura);
     RegisterSpellScript(spell_xt002_gravity_bomb_damage);
     RegisterSpellScript(spell_xt002_heart_overload_periodic);
     RegisterSpellScript(spell_xt002_energy_orb);
     RegisterSpellScript(spell_xt002_tympanic_tantrum);
     RegisterSpellScript(spell_xt002_submerged);
-    RegisterAuraScript(spell_xt002_321_boombot_aura);
-    RegisterAuraScript(spell_xt002_exposed_heart);
+    RegisterSpellScript(spell_xt002_321_boombot_aura);
+    RegisterSpellScript(spell_xt002_exposed_heart);
 
     new achievement_nerf_engineering();
     new achievement_heartbreaker();

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -108,7 +108,7 @@ enum NAXCreaturesIds
     NPC_BIGGLESWORTH            = 16998,
     NPC_LICH_KING               = 16980,
     NPC_OLD_WORLD_TRIGGER       = 15384,
-    NPC_FROGGER                 = 16027
+    NPC_LIVING_POISON           = 16027
 };
 
 enum NAXGameObjectsIds
@@ -183,9 +183,6 @@ enum NAXInstanceEvents
     // Dialogue that happens after each wing.
     EVENT_KELTHUZAD_WING_TAUNT,
 
-    // Periodic Frogger summon
-    EVENT_SUMMON_FROGGER_WAVE,
-
     // Dialogue that happens after Sapphiron's death.
     EVENT_DIALOGUE_SAPPHIRON_KELTHUZAD,
     EVENT_DIALOGUE_SAPPHIRON_LICHKING,
@@ -215,12 +212,13 @@ enum NAXInstanceTexts
     SAY_DIALOGUE_SAPPHIRON_LICH_KING2 = 2
 };
 
-
 template <class AI, class T>
 inline AI* GetNaxxramasAI(T* obj)
 {
     return GetInstanceAI<AI>(obj, NaxxramasScriptName);
 }
+
 #define RegisterNaxxramasCreatureAI(ai_name) RegisterCreatureAIWithFactory(ai_name, GetNaxxramasAI)
+#define RegisterNaxxramasGameObjectAI(ai_name) RegisterGameObjectAIWithFactory(ai_name, GetNaxxramasAI)
 
 #endif

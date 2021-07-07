@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -451,7 +451,7 @@ class spell_dk_blade_barrier : public SpellScriptLoader
         }
 };
 
-// 48721 - Blood Boil
+// -48721 - Blood Boil
 class spell_dk_blood_boil : public SpellScriptLoader
 {
     public:
@@ -636,7 +636,7 @@ private:
     bool _allowGhoul;
 };
 
-// 49158 - Corpse Explosion (51325, 51326, 51327, 51328)
+// -49158 - Corpse Explosion (51325, 51326, 51327, 51328)
 class spell_dk_corpse_explosion : public SpellScriptLoader
 {
     public:
@@ -799,6 +799,7 @@ class spell_dk_dancing_rune_weapon : public SpellScriptLoader
         }
 };
 
+// -43265 - Death and Decay
 class spell_dk_death_and_decay : public SpellScriptLoader
 {
     public:
@@ -1333,6 +1334,24 @@ class spell_dk_hysteria : public AuraScript
     }
 };
 
+// 55095 - Frost Fever
+class spell_dk_frost_fever : public AuraScript
+{
+    PrepareAuraScript(spell_dk_frost_fever);
+
+    void HandleDispel(DispelInfo* /*dispelInfo*/)
+    {
+        if (Unit* caster = GetCaster())
+            if (AuraEffect* icyClutch = GetUnitOwner()->GetAuraEffect(SPELL_AURA_MOD_DECREASE_SPEED, SPELLFAMILY_DEATHKNIGHT, 0, 0x00040000, 0, caster->GetGUID()))
+                GetUnitOwner()->RemoveAurasDueToSpell(icyClutch->GetId());
+    }
+
+    void Register() override
+    {
+        AfterDispel += AuraDispelFn(spell_dk_frost_fever::HandleDispel);
+    }
+};
+
 // 51209 - Hungering Cold
 class spell_dk_hungering_cold : public SpellScriptLoader
 {
@@ -1746,7 +1765,7 @@ class spell_dk_necrosis : public SpellScriptLoader
         }
 };
 
-// ID - 50842 Pestilence
+// 50842 - Pestilence
 class spell_dk_pestilence : public SpellScriptLoader
 {
     public:
@@ -1826,7 +1845,6 @@ class spell_dk_pestilence : public SpellScriptLoader
             return new spell_dk_pestilence_SpellScript();
         }
 };
-
 
 // 48266 - Blood Presence
 // 48263 - Frost Presence
@@ -2001,7 +2019,7 @@ class spell_dk_raise_dead : public SpellScriptLoader
             SpellCastResult CheckReagents()
             {
                 /// @workaround: there is no access to castresult of other spells, check it manually
-                SpellInfo const* reagentSpell = sSpellMgr->GetSpellInfo(SPELL_DK_RAISE_DEAD_USE_REAGENT);
+                SpellInfo const* reagentSpell = sSpellMgr->AssertSpellInfo(SPELL_DK_RAISE_DEAD_USE_REAGENT);
                 Player* player = GetCaster()->ToPlayer();
                 if (!player->CanNoReagentCast(reagentSpell))
                 {
@@ -2227,7 +2245,7 @@ class spell_dk_scent_of_blood_trigger : public SpellScriptLoader
         }
 };
 
-// 55090 - Scourge Strike (55265, 55270, 55271)
+// -55090 - Scourge Strike (55265, 55270, 55271)
 class spell_dk_scourge_strike : public SpellScriptLoader
 {
     public:
@@ -2292,7 +2310,7 @@ class spell_dk_scourge_strike : public SpellScriptLoader
         }
 };
 
-// 49145 - Spell Deflection
+// -49145 - Spell Deflection
 class spell_dk_spell_deflection : public SpellScriptLoader
 {
     public:
@@ -2525,6 +2543,7 @@ class spell_dk_unholy_blight : public SpellScriptLoader
             return new spell_dk_unholy_blight_AuraScript();
         }
 };
+
 // 55233 - Vampiric Blood
 class spell_dk_vampiric_blood : public SpellScriptLoader
 {
@@ -2633,7 +2652,7 @@ class spell_dk_wandering_plague : public SpellScriptLoader
         }
 };
 
-// 52284 - Will of the Necropolis
+// -52284 - Will of the Necropolis
 class spell_dk_will_of_the_necropolis : public SpellScriptLoader
 {
     public:
@@ -2973,7 +2992,7 @@ public:
             if (Creature* ghoul = ObjectAccessor::GetCreature(*player, ghoulGuid))
             {
                 ghoul->RemoveCharmedBy(player);
-                ghoul->DespawnOrUnsummon(1000);
+                ghoul->DespawnOrUnsummon(1s);
             }
 
             player->RemoveAura(SPELL_GHOUL_FRENZY);
@@ -3196,7 +3215,8 @@ void AddSC_deathknight_spell_scripts()
     new spell_dk_glyph_of_death_grip();
     new spell_dk_glyph_of_scourge_strike();
     RegisterSpellScript(spell_dk_glyph_of_scourge_strike_script);
-    RegisterAuraScript(spell_dk_hysteria);
+    RegisterSpellScript(spell_dk_hysteria);
+    RegisterSpellScript(spell_dk_frost_fever);
     new spell_dk_hungering_cold();
     new spell_dk_icebound_fortitude();
     new spell_dk_improved_blood_presence();
